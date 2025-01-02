@@ -15,7 +15,7 @@ class MongoFootballClient:
             matches (List[Match]): A list of processed matches
         """
         football = self.mc["football"]
-        collection = football["matches_2014"]
+        collection = football["matches"]
 
         for match in matches:
             collection.insert_one(match.__dict__)

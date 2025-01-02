@@ -30,5 +30,12 @@ class ApiFootball(Ingestor):
                                            home_team=match["teams"]["home"]["name"],
                                            away_team=match["teams"]["away"]["name"],
                                            score=match["score"],
-                                           game_week=game_week))
+                                           game_week=game_week,
+                                           season=season))
         return processed_matches
+    
+    def get_teams(self, league_id: int = 39, season: int = 2014):
+        endpoint = f"{self.base_url}/teams"
+        params = {"league": league_id, "season": season}
+        teams = get(endpoint, headers=self.base_headers, params=params)
+        print(teams.json())

@@ -8,3 +8,4 @@ class Match:
     away_team: str
     score: dict
     game_week: str
+    season: int

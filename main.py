@@ -4,12 +4,11 @@ from src.database.mongo_client import MongoFootballClient
 from src.config import Config as conf
 
 if __name__ == "__main__":
-    # oi = OddsIngestor(base_url=conf.ODDS_API_URL, api_key=conf.ODDS_API_KEY)
-    # oi.get_sports()
-
     af = ApiFootball(base_url=conf.FOOTBALL_API_URL, api_key=conf.FOOTBALL_API_KEY)
-    matches = af.get_seasons_matches()
-    print(matches[0].__dict__)
-
     mfc = MongoFootballClient(conf.MONGO_URL)
-    mfc.add_matches(matches)
+
+    for season in range(2014,2025):
+        print(f"Getting matches for season {season}")
+        matches = af.get_seasons_matches(season=season)
+        mfc.add_matches(matches)
+
