@@ -33,7 +33,7 @@ class ApiFootball(Ingestor):
                                            game_week=game_week,
                                            season=season))
         return processed_matches
-    
+
     def get_teams(self, league_id: int = 39, season: int = 2014):
         endpoint = f"{self.base_url}/teams"
         params = {"league": league_id, "season": season}
