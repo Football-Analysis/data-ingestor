@@ -9,3 +9,4 @@ class Match:
     score: dict
     game_week: str
     season: int
+    league: dict
