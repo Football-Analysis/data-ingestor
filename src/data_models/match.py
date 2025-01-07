@@ -3,7 +3,7 @@ from dataclasses import dataclass
 
 @dataclass
 class Match:
-    date: set
+    date: str
     home_team: str
     away_team: str
     score: dict

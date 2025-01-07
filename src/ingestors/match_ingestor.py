@@ -51,10 +51,15 @@ class ApiFootball(Ingestor):
         print(f"Requests left on plan: {requests_left}")
         processed_matches = []
         for match in fixtures.json()["response"]:
-            game_week = match["league"]["round"].split()[-1]
+            game_week = int(match["league"]["round"].split()[-1])
+            if game_week not in range (0,100):
+                league_type = "league"
+            else:
+                league_type = "cup"
             league_data = {}
             league_data["name"] = match["league"]["name"]
             league_data["id"] = match["league"]["id"]
+            league_data["type"] = league_type
             processed_matches.append(Match(date=match["fixture"]["date"],
                                            home_team=match["teams"]["home"]["name"],
                                            away_team=match["teams"]["away"]["name"],
