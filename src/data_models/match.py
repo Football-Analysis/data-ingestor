@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import Optional
 
 
 @dataclass
@@ -10,3 +11,4 @@ class Match:
     game_week: str
     season: int
     league: dict
+    result: str

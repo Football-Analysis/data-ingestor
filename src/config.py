@@ -9,3 +9,5 @@ class Config:
     ODDS_API_KEY: str = os.environ.get("ODDS_API_KEY", "NOT_SET")
 
     MONGO_URL = "mongodb://localhost:27017/"
+
+    CURRENT_SEASON = 2024
