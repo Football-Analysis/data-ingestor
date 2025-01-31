@@ -50,3 +50,24 @@ def league_type(match: Match) -> Match:
 
     match.league["type"] = league_type
     return match
+
+
+def create_standings(league_id: int, season: int):
+    mfc = MongoFootballClient(conf.MONGO_URL)
+    teams = mfc.get_teams_in_season(39, 2014)
+    gameweeks = mfc.get_gameweeks_for_season(league_id, season)
+
+
+    standings = {}
+    table = {}
+    for team in teams:
+        table[team] = {"position": None, "points": None}
+    
+    for week in gameweeks:
+        standings[int(week)] = table
+
+    for week in range(len(gameweeks)):
+        weeks_matches = mfc.get_matches_in_gameweek(league_id, season, str(week+1))
+        for match in weeks_matches:
+            pass
+            

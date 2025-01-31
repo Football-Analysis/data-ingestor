@@ -62,3 +62,32 @@ class MongoFootballClient:
     def cast_mongo_to_match(self, match):
         del match["_id"]
         return Match(**match)
+    
+    def get_teams_in_season(self, league_id: int, season: int):
+        league = self.league_collection.find_one({
+            "league_id": league_id,
+            "season": season
+        })
+
+        return league["teams"]
+    
+    def get_matches_in_gameweek(self, league_id: int, season: int, game_week: str) -> List[Match]:
+        matches = self.match_collection.find({
+            "league.id": league_id,
+            "season": season,
+            "game_week": game_week
+        })
+
+        weeks_matches = []
+        for match in matches:
+            del match["_id"]
+            weeks_matches.append(Match(**match))
+
+        return weeks_matches
+    
+    def get_gameweeks_for_season(self, league_id, season):
+        gameweeks = self.match_collection.distinct("game_week",
+                                                   {"league.id": league_id,
+                                                    "season": season})
+        return gameweeks
+

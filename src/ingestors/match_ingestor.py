@@ -33,10 +33,11 @@ class ApiFootball(Ingestor):
         sleep(0.143)
         endpoint = f"{self.base_url}/leagues"
         if league_id:
-            params = {"id": league_id}
+            params = {"id": league_id, "type": "league"}
             leagues = get(endpoint, headers=self.base_headers, params=params)
         else:
-            leagues = get(endpoint, headers=self.base_headers)
+            params = {"type": "league"}
+            leagues = get(endpoint, headers=self.base_headers, params=params)
 
         league_data = leagues.json()
         leagues_to_get = {}
@@ -81,3 +82,12 @@ class ApiFootball(Ingestor):
         league = get(endpoint, headers=self.base_headers, params=params)
         league_name = league.json()["response"][0]["league"]["name"]
         return league_name
+    
+    def get_standings(self):
+        sleep(0.143)
+        endpoint = f"{self.base_url}/standings"
+        params = {"league": 39, "season": 2024, "game_week":"10"}
+        standings = get(endpoint, headers=self.base_headers, params=params)
+        requests_left = standings.headers["x-ratelimit-requests-remaining"]
+        print(f"Requests left on plan: {requests_left}")
+        print(standings.json())
