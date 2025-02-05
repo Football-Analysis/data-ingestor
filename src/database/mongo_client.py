@@ -1,6 +1,7 @@
 from pymongo import MongoClient
 from ..data_models.league import League
 from ..data_models.match import Match
+from ..data_models.observation import Observation
 from typing import List
 from tqdm import tqdm
 
@@ -12,6 +13,7 @@ class MongoFootballClient:
         self.football = self.mc["football"]
         self.match_collection = self.football["matches"]
         self.league_collection = self.football["leagues"]
+        self.observation_collection = self.football["observations"]
         
 
     def add_team_list(self, league: League):
@@ -23,6 +25,8 @@ class MongoFootballClient:
         self.league_collection.insert_one(league.__dict__)
         print("Added all leagues")
 
+    def add_observation(self, observation: Observation):
+        self.observation_collection.insert_one(observation.__dict__)
 
     def add_matches(self, matches: List[Match]):
         """Takes a list of Match objects and inserts them into the correct collection in mongo
@@ -46,11 +50,22 @@ class MongoFootballClient:
             self.match_collection.update_one(query , update_values)
         print("Updated all matches")
 
-    def get_matches(self):
-        football = self.mc["football"]
-        collection = football["matches"]
+    def get_matches(self) -> List[Match]:
         print("Querying all matches")
-        cursor = collection.find({})
+        cursor = self.match_collection.find({})
+        matches = []
+        print("Casting all results as matches")
+        matches = list(map(self.cast_mongo_to_match, cursor))
+        for match in cursor:
+            del match["_id"]
+            matches.append(Match(**match))
+        return matches
+    
+    def get_finished_matches(self) -> List[Match]:
+        print("Querying all finished matches")
+        cursor = self.match_collection.find({
+            "result": {"$ne": "N/A"}
+        })
         matches = []
         print("Casting all results as matches")
         matches = list(map(self.cast_mongo_to_match, cursor))
@@ -62,3 +77,19 @@ class MongoFootballClient:
     def cast_mongo_to_match(self, match):
         del match["_id"]
         return Match(**match)
+    
+    def get_league(self, league_id: int, season:int) -> League:
+        #print(f"Querying league with id {league_id} and season {season}")
+        league = self.league_collection.find_one({
+            "league_id": league_id,
+            "season": season
+        })
+        if league is None:
+            return False
+        del league["_id"]
+        return League(**league)
+
+    def cast_to_league(self, league):
+        del league["_id"]
+        return League(**league)
+
