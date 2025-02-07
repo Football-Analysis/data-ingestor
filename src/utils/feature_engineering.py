@@ -3,6 +3,7 @@ from ..database.mongo_client import MongoFootballClient
 from ..config import Config as conf
 from ..data_models.observation import Observation
 from tqdm import tqdm
+from typing import List, Tuple
 
 def engineer_all_features():
     mfc = MongoFootballClient(conf.MONGO_URL)
@@ -71,19 +72,40 @@ def create_training_data():
     matches = mfc.get_finished_matches()
     for match in tqdm(matches):
         match_id = f"{match.date}-{match.home_team}"
+        #if  not mfc.check_observation(match_id):
         result = match.result
-        #print(match.__dict__)
+        home_general_form, away_general_form = create_general_form(match)
+        home_local_form, away_local_form = create_local_form(match)
+        observation = Observation(match_id=match_id,
+                                away_general_5=away_general_form[0],
+                                away_general_4=away_general_form[1],
+                                away_general_3=away_general_form[2],
+                                away_general_2=away_general_form[3],
+                                away_general_1=away_general_form[4],
+                                away_away_5=away_local_form[4],
+                                away_away_4=away_local_form[3],
+                                away_away_3=away_local_form[2],
+                                away_away_2=away_local_form[1],
+                                away_away_1=away_local_form[0],
+                                home_general_5=home_general_form[0],
+                                home_general_4=home_general_form[1],
+                                home_general_3=home_general_form[2],
+                                home_general_2=home_general_form[3],
+                                home_general_1=home_general_form[4],
+                                home_home_5=home_local_form[4],
+                                home_home_4=home_local_form[3],
+                                home_home_3=home_local_form[2],
+                                home_home_2=home_local_form[1],
+                                home_home_1=home_local_form[0],
+                                result=result)
+        mfc.add_observation(observation)
 
-        league = mfc.get_league(match.league["id"], match.season)
-        #print(league.__dict__)
-        try:
-            home_form = league.teams[str(match.home_team)]["form"][str(match.game_week)]
-        except:
-            home_five = "N"
-            home_four = "N"
-            home_three = "N"
-            home_two = "N"
-            home_one = "N"
+        
+def create_general_form(match: Match):
+    mfc = MongoFootballClient(conf.MONGO_URL)
+    league = mfc.get_league(match.league["id"], match.season)
+    try:
+        home_form = league.teams[str(match.home_team)]["form"][str(match.game_week)]
         if not bool(home_form):
             home_five = "N"
             home_four = "N"
@@ -96,15 +118,15 @@ def create_training_data():
             home_three = home_form[2]
             home_two = home_form[3]
             home_one = home_form[4]
+    except:
+        home_five = "N"
+        home_four = "N"
+        home_three = "N"
+        home_two = "N"
+        home_one = "N"
 
-        try:
-            away_form = league.teams[str(match.away_team)]["form"][str(match.game_week)]
-        except:
-            away_five = "N"
-            away_four = "N"
-            away_three = "N"
-            away_two = "N"
-            away_one = "N"
+    try:
+        away_form = league.teams[str(match.away_team)]["form"][str(match.game_week)]
         if not bool(away_form):
             away_five = "N"
             away_four = "N"
@@ -117,19 +139,59 @@ def create_training_data():
             away_three = away_form[2]
             away_two = away_form[3]
             away_one = away_form[4]
-        
-        observation = Observation(match_id=match_id,
-                                  away_five=away_five,
-                                  away_four=away_four,
-                                  away_three=away_three,
-                                  away_two=away_two,
-                                  away_one=away_one,
-                                  home_five=home_five,
-                                  home_four=home_four,
-                                  home_three=home_three,
-                                  home_two=home_two,
-                                  home_one=home_one,
-                                  result=result)
-        mfc.add_observation(observation)
+    except:
+        away_five = "N"
+        away_four = "N"
+        away_three = "N"
+        away_two = "N"
+        away_one = "N"
+    
+
+    return (home_five, home_four, home_three, home_two, home_one), \
+        (away_five, away_four, away_three, away_two, away_one)
+
+
+def create_local_form(match: Match):
+    mfc = MongoFootballClient(conf.MONGO_URL)
+
+    home_home_matches = mfc.get_last_5_games(match.league["id"], match.season, match.home_team, match.game_week, True)
+    home_home_form = calculate_local_form(home_home_matches)
+    away_away_matches = mfc.get_last_5_games(match.league["id"], match.season, match.away_team, match.game_week, False)
+    away_away_form = calculate_local_form(away_away_matches, False)
+
+    return home_home_form, away_away_form
+
+def calculate_local_form(matches: List[Match], home: bool = True) -> List[str]:
+    form = []
+    for match in matches:
+        if home:
+            if match.result == "Home Win":
+                form.append("W")
+            elif match.result == "Draw":
+                form.append("D")
+            else:
+                form.append("L")
+        else:
+            if match.result == "Away Win":
+                form.append("W")
+            elif match.result == "Draw":
+                form.append("D")
+            else:
+                form.append("L")
+    form = (form + ["N"] * 5)[:5]
+    return form
+
+    
+    
 
         
+
+
+            
+
+
+
+    
+
+
+

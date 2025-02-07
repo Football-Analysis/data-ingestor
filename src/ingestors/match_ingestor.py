@@ -35,6 +35,21 @@ class ApiFootball(Ingestor):
             teams_to_save[team_id]["form"] = teams_form
 
         return League(league_id, season, teams_to_save)
+    
+    def get_odds_leagues(self):
+        endpoint = f"{self.base_url}/leagues"
+        params = {"type": "league"}
+        leagues = get(endpoint, headers=self.base_headers, params=params)
+
+        self.check_api_limits(leagues.headers)
+        league_data = leagues.json()
+        leagues_to_get = []
+        for league in league_data["response"]:
+            league_id = league["league"]["id"]
+            for season in league["seasons"]:
+                if season["coverage"]["odds"] and season["year"] > 2010:
+                    leagues_to_get.append((league_id, season["year"]))
+        return leagues_to_get
 
     def get_leagues(self, league_id: Optional[int] = None):
         endpoint = f"{self.base_url}/leagues"
@@ -74,8 +89,6 @@ class ApiFootball(Ingestor):
         params = {"league": league_id, "season": season}
         fixtures = get(endpoint, headers=self.base_headers, params=params)
         self.check_api_limits(fixtures.headers)
-        requests_left = fixtures.headers["x-ratelimit-requests-remaining"]
-        print(f"Requests left on plan: {requests_left}")
         processed_matches = []
         for match in fixtures.json()["response"]:
             success, processed_match = process_raw_match(match)
@@ -112,7 +125,9 @@ class ApiFootball(Ingestor):
                 self.start_minute = time()
 
     def test(self):
-        endpoint = f"{self.base_url}/status"
-        league = get(endpoint, headers=self.base_headers)
+        endpoint = f"{self.base_url}/odds"
+        params = {"league": 39, "season": 2024, "bookmaker": 3}
+        league = get(endpoint, headers=self.base_headers, params=params)
         self.check_api_limits(league.headers)
+        print(len(league.json()["response"]))
 

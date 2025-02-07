@@ -1,4 +1,4 @@
-from pymongo import MongoClient
+from pymongo import MongoClient, DESCENDING
 from ..data_models.league import League
 from ..data_models.match import Match
 from ..data_models.observation import Observation
@@ -79,7 +79,6 @@ class MongoFootballClient:
         return Match(**match)
     
     def get_league(self, league_id: int, season:int) -> League:
-        #print(f"Querying league with id {league_id} and season {season}")
         league = self.league_collection.find_one({
             "league_id": league_id,
             "season": season
@@ -88,8 +87,44 @@ class MongoFootballClient:
             return False
         del league["_id"]
         return League(**league)
+    
+    def check_observation(self, match_id):
+        obs = self.observation_collection.find_one({
+            "match_id": match_id
+        })
+        if obs is None:
+            return False
+        del obs["_id"]
+        return Observation(**obs)
 
     def cast_to_league(self, league):
         del league["_id"]
         return League(**league)
+    
+    def get_last_5_games(self, league: int, season: int, team: int, game_week: int, home: bool = True) -> List[Match]:
+        gen_filter = {
+            "league.id": league,
+            "season": season,
+            "game_week": {"$lt": game_week}
+        }
+        if home:
+            gen_filter["home_team"] = team
+        else:
+            gen_filter["away_team"] = team
+
+        matches = self.match_collection.find(gen_filter).sort("game_week", DESCENDING)
+
+        matches_to_return = []
+        for match in matches:
+            del match["_id"]
+            matches_to_return.append(Match(**match))
+        
+        if len(matches_to_return) < 5:
+            return matches_to_return
+        return matches_to_return[:5]
+
+    
+        
+
+
 
