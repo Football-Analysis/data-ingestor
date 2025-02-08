@@ -13,7 +13,7 @@ def engineer_all_features():
     processed_matches = list(map(league_type, matches))
     return processed_matches
 
-def process_raw_prediction(prediction) -> Prediction:
+def process_raw_prediction(prediction, fixture_id) -> Prediction:
     home_chance = int(prediction["predictions"]["percent"]["home"].split("%")[0])/100
     away_chance = int(prediction["predictions"]["percent"]["away"].split("%")[0])/100
     draw_chance = int(prediction["predictions"]["percent"]["draw"].split("%")[0])/100
@@ -25,7 +25,8 @@ def process_raw_prediction(prediction) -> Prediction:
     else:
         result = "Home Win"
 
-    return Prediction(home_chance=home_chance,
+    return Prediction(fixture=fixture_id,
+                      home_chance=home_chance,
                       away_chance=away_chance,
                       draw_chance=draw_chance,
                       result=result)

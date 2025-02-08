@@ -78,7 +78,7 @@ class ApiFootball(Ingestor):
         predictions = get(endpoint, headers=self.base_headers, params=params)
         self.check_api_limits(predictions.headers)
         pred_data = predictions.json()["response"]
-        processed_prediction = process_raw_prediction(pred_data)
+        processed_prediction = process_raw_prediction(pred_data, fixture_id)
         return processed_prediction
 
     def get_seasons_matches(self, league_id: int = 39, season: int = 2014) -> List[Match]:
