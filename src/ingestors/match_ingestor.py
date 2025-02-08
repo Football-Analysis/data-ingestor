@@ -3,8 +3,9 @@ from typing import List, Optional
 from .ingestor import Ingestor
 from ..data_models.match import Match
 from ..data_models.league import League
+from ..data_models.prediction import Prediction
 from time import sleep, time
-from ..utils.feature_engineering import process_raw_match, calculate_form
+from ..utils.feature_engineering import process_raw_match, calculate_form, process_raw_prediction
 
 
 class ApiFootball(Ingestor):
@@ -62,17 +63,23 @@ class ApiFootball(Ingestor):
 
         self.check_api_limits(leagues.headers)
         league_data = leagues.json()
-        leagues_to_get = {}
+        leagues_to_get = []
         for league in league_data["response"]:
             league_id = league["league"]["id"]
             for season in league["seasons"]:
                 if season["coverage"]["fixtures"]["events"] == True and season["year"] > 2010:
-                    if league_id in leagues_to_get:
-                        leagues_to_get[league_id].append(season["year"])
-                    else:
-                        leagues_to_get[league_id] = [season["year"]]
+                    leagues_to_get.append((league_id, season["year"]))
 
         return leagues_to_get
+    
+    def get_predictions(self, fixture_id):
+        endpoint = f"{self.base_url}/predictions"
+        params = {"fixture": fixture_id}
+        predictions = get(endpoint, headers=self.base_headers, params=params)
+        self.check_api_limits(predictions.headers)
+        pred_data = predictions.json()["response"]
+        processed_prediction = process_raw_prediction(pred_data)
+        return processed_prediction
 
     def get_seasons_matches(self, league_id: int = 39, season: int = 2014) -> List[Match]:
         """Takes a league and season, queries the fixtures API endpoint and returns all
@@ -112,7 +119,7 @@ class ApiFootball(Ingestor):
         else:
             if requests_left_day % 5000 == 0:
                 print(f"{requests_left_day} requests left on daily plan")
-            if requests_left_min % 100 == 0:
+            if requests_left_min % 50 == 0:
                 print(f"{requests_left_min} requests left on minute limit")
             if requests_left_day < 50:
                 raise RuntimeError("Daily API limit reached for API-Football. Please come back tomorrow")

@@ -16,17 +16,13 @@ class OddsIngestor(Ingestor):
             print(sports.headers["x-requests-remaining"])
         else:
             raise RuntimeError(f"Unable to retrieve list of sports, status code {sports.status_code}, error message: {sports.text}")
-
-    def get_odds(self, sport_key: str, region: str = "uk"):
-        """Given a sport, returns the current list of odds for that sports market
-
-        Args:
-            sport_key (str): The key of the sport to retrieve odds for (this can be got from the /sports endpoint)
-            region (str) default = uk: The region to get bookmaker odds from
-        """
-        endpoint = f"{self.base_url}/sports/{sport_key}/odds"
-        odds = get(endpoint, params={'api_key': self.api_key, 'regions': region})
+        
+    def get_odds_from_date(self, league, date):
+        endpoint = f"{self.base_url}/sports/{league}/odds"
+        params = {"api_key": self.api_key, "regions": "uk"}
+        odds = get(endpoint, params=params)
         if 300 > odds.status_code >= 200:
-            print(odds.json())
-        else:
-            raise RuntimeError(f"Unable to retrieve list of sports, status code {odds.status_code}, error message: {odds.text}")
+            data = odds.json()
+            print(data[1])
+            print(len(data))
+            print(odds.headers["x-requests-remaining"])

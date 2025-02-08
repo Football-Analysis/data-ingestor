@@ -40,4 +40,8 @@ class Observation:
     away_away_3: str
     away_away_2: str
     away_away_1: str
+    home_api_pred: int
+    draw_api_pred: int
+    away_api_pred: int
+    api_pred: int
     result: str
