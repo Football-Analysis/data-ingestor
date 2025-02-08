@@ -67,38 +67,57 @@ def calculate_form(form):
             form_to_return[str(week)] = form[week-6:week-1]
     return form_to_return
 
-def create_training_data():
+def create_training_data(update=True):
     mfc = MongoFootballClient(conf.MONGO_URL)
     matches = mfc.get_finished_matches()
     for match in tqdm(matches):
         match_id = f"{match.date}-{match.home_team}"
         #if  not mfc.check_observation(match_id):
         result = match.result
-        home_general_form, away_general_form = create_general_form(match)
-        home_local_form, away_local_form = create_local_form(match)
+        home_general_form, home_form_aggregate, away_general_form, away_form_aggregate = create_general_form(match)
+        home_local_form, home_home_aggreagate, away_local_form, away_away_aggregate = create_local_form(match)
         observation = Observation(match_id=match_id,
+                                  away_general_wins = away_form_aggregate[0],
+                                  away_general_draws = away_form_aggregate[1],
+                                  away_general_losses = away_form_aggregate[2],
+                                  away_general_unknown = away_form_aggregate[3],
                                 away_general_5=away_general_form[0],
                                 away_general_4=away_general_form[1],
                                 away_general_3=away_general_form[2],
                                 away_general_2=away_general_form[3],
                                 away_general_1=away_general_form[4],
+                                away_away_wins=away_away_aggregate[0],
+                                away_away_draws=away_away_aggregate[1],
+                                away_away_losses=away_away_aggregate[2],
+                                away_away_unknown=away_away_aggregate[3],
                                 away_away_5=away_local_form[4],
                                 away_away_4=away_local_form[3],
                                 away_away_3=away_local_form[2],
                                 away_away_2=away_local_form[1],
                                 away_away_1=away_local_form[0],
+                                home_general_wins=home_form_aggregate[0],
+                                home_general_draws=home_form_aggregate[1],
+                                home_general_losses=home_form_aggregate[2],
+                                home_general_unknown=home_form_aggregate[3],
                                 home_general_5=home_general_form[0],
                                 home_general_4=home_general_form[1],
                                 home_general_3=home_general_form[2],
                                 home_general_2=home_general_form[3],
                                 home_general_1=home_general_form[4],
+                                home_home_wins=home_home_aggreagate[0],
+                                home_home_draws=home_home_aggreagate[1],
+                                home_home_losses=home_home_aggreagate[2],
+                                home_home_unknown=home_home_aggreagate[3],
                                 home_home_5=home_local_form[4],
                                 home_home_4=home_local_form[3],
                                 home_home_3=home_local_form[2],
                                 home_home_2=home_local_form[1],
                                 home_home_1=home_local_form[0],
                                 result=result)
-        mfc.add_observation(observation)
+        if update:
+            mfc.update_observation(observation)
+        else:
+            mfc.add_observation(observation)
 
         
 def create_general_form(match: Match):
@@ -107,49 +126,31 @@ def create_general_form(match: Match):
     try:
         home_form = league.teams[str(match.home_team)]["form"][str(match.game_week)]
         if not bool(home_form):
-            home_five = "N"
-            home_four = "N"
-            home_three = "N"
-            home_two = "N"
-            home_one = "N"
-        else:
-            home_five = home_form[0]
-            home_four = home_form[1]
-            home_three = home_form[2]
-            home_two = home_form[3]
-            home_one = home_form[4]
+            home_form = "NNNNN"
     except:
-        home_five = "N"
-        home_four = "N"
-        home_three = "N"
-        home_two = "N"
-        home_one = "N"
+        home_form = "NNNNN"
 
     try:
         away_form = league.teams[str(match.away_team)]["form"][str(match.game_week)]
         if not bool(away_form):
-            away_five = "N"
-            away_four = "N"
-            away_three = "N"
-            away_two = "N"
-            away_one = "N"
-        else:
-            away_five = away_form[0]
-            away_four = away_form[1]
-            away_three = away_form[2]
-            away_two = away_form[3]
-            away_one = away_form[4]
+            away_form = "NNNNN"
     except:
-        away_five = "N"
-        away_four = "N"
-        away_three = "N"
-        away_two = "N"
-        away_one = "N"
+        away_form = "NNNNN"
     
+    home_form = list(home_form)
+    away_form = list(away_form)
 
-    return (home_five, home_four, home_three, home_two, home_one), \
-        (away_five, away_four, away_three, away_two, away_one)
+    home_wins = home_form.count("W")
+    home_draws = home_form.count("D")
+    home_losses = home_form.count("L")
+    home_unknown = home_form.count("N")
+    away_wins = away_form.count("W")
+    away_draws = away_form.count("D")
+    away_losses = away_form.count("L")
+    away_unknown = away_form.count("N")
 
+    return home_form, (home_wins, home_draws, home_losses, home_unknown), \
+        away_form, (away_wins, away_draws, away_losses, away_unknown)
 
 def create_local_form(match: Match):
     mfc = MongoFootballClient(conf.MONGO_URL)
@@ -159,7 +160,17 @@ def create_local_form(match: Match):
     away_away_matches = mfc.get_last_5_games(match.league["id"], match.season, match.away_team, match.game_week, False)
     away_away_form = calculate_local_form(away_away_matches, False)
 
-    return home_home_form, away_away_form
+    home_wins = home_home_form.count("W")
+    home_draws = home_home_form.count("D")
+    home_losses = home_home_form.count("L")
+    home_unknown = home_home_form.count("N")
+    away_wins = away_away_form.count("W")
+    away_draws = away_away_form.count("D")
+    away_losses = away_away_form.count("L")
+    away_unknown = away_away_form.count("N")
+
+    return home_home_form, (home_wins, home_draws, home_losses, home_unknown), \
+        away_away_form, (away_wins, away_draws, away_losses, away_unknown)
 
 def calculate_local_form(matches: List[Match], home: bool = True) -> List[str]:
     form = []

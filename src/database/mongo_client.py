@@ -13,7 +13,7 @@ class MongoFootballClient:
         self.football = self.mc["football"]
         self.match_collection = self.football["matches"]
         self.league_collection = self.football["leagues"]
-        self.observation_collection = self.football["observations"]
+        self.observation_collection = self.football["observations_test"]
         
 
     def add_team_list(self, league: League):
@@ -27,6 +27,11 @@ class MongoFootballClient:
 
     def add_observation(self, observation: Observation):
         self.observation_collection.insert_one(observation.__dict__)
+
+    def update_observation(self, observation: Observation):
+        query = {"match_id": observation.match_id}
+        update_values = {"$set": observation.__dict__}
+        self.observation_collection.update_one(query , update_values)
 
     def add_matches(self, matches: List[Match]):
         """Takes a list of Match objects and inserts them into the correct collection in mongo
