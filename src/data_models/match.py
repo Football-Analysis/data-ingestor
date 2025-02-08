@@ -5,10 +5,11 @@ from typing import Optional
 @dataclass
 class Match:
     date: str
-    home_team: str
-    away_team: str
+    fixture_id: int
+    home_team: int
+    away_team: int
     score: dict
-    game_week: str
+    game_week: int
     season: int
     league: dict
     result: str
