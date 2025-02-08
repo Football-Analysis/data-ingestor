@@ -35,9 +35,8 @@ class MongoFootballClient:
         update_values = {"$set": observation.__dict__}
         self.observation_collection.update_one(query , update_values)
 
-    def add_predictions(self, predictions: List[Prediction]):
-        for prediction in predictions:
-            self.api_predictions_collection.insert_one(prediction.__dict__)
+    def add_prediction(self, prediction: Prediction):
+        self.api_predictions_collection.insert_one(prediction.__dict__)
 
     def add_matches(self, matches: List[Match]):
         """Takes a list of Match objects and inserts them into the correct collection in mongo
