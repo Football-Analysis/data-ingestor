@@ -2,7 +2,6 @@ from pymongo import MongoClient, DESCENDING
 from ..data_models.league import League
 from ..data_models.match import Match
 from ..data_models.observation import Observation
-from ..data_models.prediction import Prediction
 from typing import List
 from tqdm import tqdm
 
@@ -34,9 +33,6 @@ class MongoFootballClient:
         query = {"match_id": observation.match_id}
         update_values = {"$set": observation.__dict__}
         self.observation_collection.update_one(query , update_values)
-
-    def add_prediction(self, prediction: Prediction):
-        self.api_predictions_collection.insert_one(prediction.__dict__)
 
     def add_matches(self, matches: List[Match]):
         """Takes a list of Match objects and inserts them into the correct collection in mongo

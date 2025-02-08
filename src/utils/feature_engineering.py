@@ -1,5 +1,4 @@
 from ..data_models.match import Match
-from ..data_models.prediction import Prediction
 from ..database.mongo_client import MongoFootballClient
 from ..config import Config as conf
 from ..data_models.observation import Observation
@@ -12,24 +11,6 @@ def engineer_all_features():
     print("Calculating league.type values")
     processed_matches = list(map(league_type, matches))
     return processed_matches
-
-def process_raw_prediction(prediction, fixture_id) -> Prediction:
-    home_chance = int(prediction["predictions"]["percent"]["home"].split("%")[0])/100
-    away_chance = int(prediction["predictions"]["percent"]["away"].split("%")[0])/100
-    draw_chance = int(prediction["predictions"]["percent"]["draw"].split("%")[0])/100
-
-    if draw_chance > away_chance and draw_chance > home_chance:
-        result = "Draw"
-    elif away_chance > home_chance and away_chance > draw_chance:
-        result = "Away Win"
-    else:
-        result = "Home Win"
-
-    return Prediction(fixture=fixture_id,
-                      home_chance=home_chance,
-                      away_chance=away_chance,
-                      draw_chance=draw_chance,
-                      result=result)
 
 def process_raw_match(match):
     game_week = match["league"]["round"].split()[-1]

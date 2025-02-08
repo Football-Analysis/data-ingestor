@@ -3,9 +3,8 @@ from typing import List, Optional
 from .ingestor import Ingestor
 from ..data_models.match import Match
 from ..data_models.league import League
-from ..data_models.prediction import Prediction
 from time import sleep, time
-from ..utils.feature_engineering import process_raw_match, calculate_form, process_raw_prediction
+from ..utils.feature_engineering import process_raw_match, calculate_form
 
 
 class ApiFootball(Ingestor):
@@ -71,15 +70,6 @@ class ApiFootball(Ingestor):
                     leagues_to_get.append((league_id, season["year"]))
 
         return leagues_to_get
-    
-    def get_predictions(self, fixture_id):
-        endpoint = f"{self.base_url}/predictions"
-        params = {"fixture": fixture_id}
-        predictions = get(endpoint, headers=self.base_headers, params=params)
-        self.check_api_limits(predictions.headers)
-        pred_data = predictions.json()["response"]
-        processed_prediction = process_raw_prediction(pred_data, fixture_id)
-        return processed_prediction
 
     def get_seasons_matches(self, league_id: int = 39, season: int = 2014) -> List[Match]:
         """Takes a league and season, queries the fixtures API endpoint and returns all
