@@ -63,11 +63,15 @@ class ApiFootball(Ingestor):
         self.check_api_limits(leagues.headers)
         league_data = leagues.json()
         leagues_to_get = []
+        league_ids = []
         for league in league_data["response"]:
             league_id = league["league"]["id"]
             for season in league["seasons"]:
                 if season["coverage"]["fixtures"]["events"] == True and season["year"] > 2010:
                     leagues_to_get.append((league_id, season["year"]))
+                    if league_id not in league_ids:
+                        print(league["league"]["name"])
+                        league_ids.append(league_id)
 
         return leagues_to_get
 
@@ -107,7 +111,7 @@ class ApiFootball(Ingestor):
         if requests_left_min == 449:
             self.start_minute = time()
         else:
-            if requests_left_day % 5000 == 0:
+            if requests_left_day % 1000 == 0:
                 print(f"{requests_left_day} requests left on daily plan")
             if requests_left_min % 50 == 0:
                 print(f"{requests_left_min} requests left on minute limit")
@@ -120,6 +124,13 @@ class ApiFootball(Ingestor):
         
             if time() - self.start_minute > 60:
                 self.start_minute = time()
+
+    def get_team_name(self, id):
+        endpoint = f"{self.base_url}/teams"
+        params = {"id": id}
+        teams = get(endpoint, headers=self.base_headers, params=params)
+        self.check_api_limits(teams.headers)
+        return teams.json()["response"][0]["team"]["name"]
 
     def test(self):
         endpoint = f"{self.base_url}/odds"

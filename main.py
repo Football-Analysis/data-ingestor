@@ -8,4 +8,6 @@ from tqdm import tqdm
 if __name__ == "__main__":
     af = ApiFootball(base_url=conf.FOOTBALL_API_URL, api_key=conf.FOOTBALL_API_KEY)
     mfc = MongoFootballClient(conf.MONGO_URL)
+
+    af.get_leagues()
     
