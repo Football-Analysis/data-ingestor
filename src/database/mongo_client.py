@@ -2,8 +2,10 @@ from pymongo import MongoClient, DESCENDING
 from ..data_models.league import League
 from ..data_models.match import Match
 from ..data_models.observation import Observation
+from ..data_models.odds import Odds
 from typing import List
 from tqdm import tqdm
+from ..data_models.team import Team
 
 
 class MongoFootballClient:
@@ -15,6 +17,8 @@ class MongoFootballClient:
         self.league_collection = self.football["leagues"]
         self.observation_collection = self.football["observations"]
         self.api_predictions_collection = self.football["apiPredictions"]
+        self.odds_collection = self.football["odds"]
+        self.team_collection = self.football["teams"]
         
 
     def add_team_list(self, league: League):
@@ -127,6 +131,36 @@ class MongoFootballClient:
         if len(matches_to_return) < 5:
             return matches_to_return
         return matches_to_return[:5]
+    
+    def check_odd(self, date, home):
+        result = self.odds_collection.find_one({
+            "date": date,
+            "home_team": home
+        })
+        if result is not None:
+            return True
+        return False
+    
+    def get_all_teams(self):
+        cursor = self.league_collection.find()
+
+        all_teams = set()
+        for league in cursor:
+            teams = list(league["teams"].keys())
+            teams = [int(x) for x in teams]
+            all_teams.update(teams)
+        return list(all_teams)
+    
+    def add_team(self, team):
+        self.team_collection.insert_one(team.__dict__)
+
+    def add_odd(self, odd: Odds):
+        self.odds_collection.insert_one(odd.__dict__)
+
+    def update_odd(self, odd: Odds):
+        query = {"date": odd.date, "home_team": odd.home_team}
+        update_values = {"$set": odd.__dict__}
+        self.odds_collection.update_one(query , update_values)
 
     
         
