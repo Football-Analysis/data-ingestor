@@ -34,12 +34,12 @@ sims_to_plot.append(all_simulations[-1])
 
 
 print("BEST, MEAN and WORST CASE")
-print(all_simulations[0][-1])
-print(all_simulations[len(all_simulations)//2][-1])
-print(all_simulations[-1][-1])
+worst = all_simulations[0][-1]
+mean = all_simulations[len(all_simulations)//2][-1]
+best = all_simulations[-1][-1]
 print("95% CONFIDENCE LEVEL BETWEEN")
-print(all_simulations[int(len(all_simulations)*0.025)][-1])
-print(all_simulations[int(len(all_simulations)*0.975)][-1])
+low_percentile = all_simulations[int(len(all_simulations)*0.025)][-1]
+high_percentile = all_simulations[int(len(all_simulations)*0.975)][-1]
 
 plt.figure(figsize=(10,6))
 
@@ -49,11 +49,9 @@ for sim in sims_to_plot:
 plt.plot(all_simulations[int(len(all_simulations)*0.025)], color="red")
 plt.plot(all_simulations[int(len(all_simulations)*0.975)], color="red")
 
-plt.title("Monte Carlo Sim")
+plt.title(f"{num_sims}S, {num_bets}B, {edge}E - {best}B, {mean}M, {worst}W - 95% [{low_percentile}, {high_percentile}]")
 plt.xlabel("Bet number")
 plt.ylabel("Bankroll")
 plt.grid(True)
 
 plt.savefig(f'{num_sims}-simulations-{num_bets}-bets-{edge}-edge.png')
-
-plt.show()
