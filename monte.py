@@ -54,4 +54,4 @@ plt.xlabel("Bet number")
 plt.ylabel("Bankroll")
 plt.grid(True)
 
-plt.savefig(f'{num_sims}-simulations-{num_bets}-bets-{edge}-edge.png')
+plt.savefig(f'{num_sims}-simulations-{num_bets}-bets-{edge}-edge-{bet_percentage}-bet-percent.png')
