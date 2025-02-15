@@ -34,12 +34,12 @@ sims_to_plot.append(all_simulations[-1])
 
 
 print("BEST, MEAN and WORST CASE")
-worst = all_simulations[0][-1]
-mean = all_simulations[len(all_simulations)//2][-1]
-best = all_simulations[-1][-1]
+worst = int(all_simulations[0][-1])
+mean = int(all_simulations[len(all_simulations)//2][-1])
+best = int(all_simulations[-1][-1])
 print("95% CONFIDENCE LEVEL BETWEEN")
-low_percentile = all_simulations[int(len(all_simulations)*0.025)][-1]
-high_percentile = all_simulations[int(len(all_simulations)*0.975)][-1]
+low_percentile = int(all_simulations[int(len(all_simulations)*0.025)][-1])
+high_percentile = int(all_simulations[int(len(all_simulations)*0.975)][-1])
 
 plt.figure(figsize=(10,6))
 
