@@ -1,12 +1,13 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from tqdm import tqdm
+from random import uniform
 
 initial_bankroll = 1000
-bet_percentage = 0.01
-odds = 2.5
+highest_bet_percentage = 0.03
+# odds = 2.5
 edge = 0.05
-winning_prob = (1/odds)*(1+edge)
+#winning_prob = (1/odds)*(1+edge)
 losing_prob = 0.58
 num_bets = 2400
 num_sims = 100000
@@ -16,6 +17,9 @@ def run_simulation():
     bankroll_hostory = [bankroll]
 
     for _ in range(num_bets):
+        odds = uniform(1.2, 6.0)
+        winning_prob = (1/odds)*(1+edge)
+        bet_percentage = highest_bet_percentage - (0.004*odds) 
         bet_amount = bankroll*bet_percentage
         if np.random.rand() < winning_prob:
             bankroll += bet_amount * (odds-1)
