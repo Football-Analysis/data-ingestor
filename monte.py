@@ -4,9 +4,9 @@ from tqdm import tqdm
 from random import uniform
 
 initial_bankroll = 1000
-default_bet_percentage = 0.02
+default_bet_percentage = 0.01
 # odds = 2.5
-edge = 0.05
+#edge = 0.05
 #winning_prob = (1/odds)*(1+edge)
 num_bets = 2400
 num_sims = 100000
@@ -17,9 +17,11 @@ def run_simulation():
 
     for _ in range(num_bets):
         odds = uniform(1.1, 6.0)
+        edge = uniform(0.05, 0.20)
         winning_prob = (1/odds)*(1+edge)
-        refactor = 2/odds
-        bet_percentage = default_bet_percentage * refactor
+        sizing_refactor = 2/odds
+        confidence_refactor = odds/0.05
+        bet_percentage = default_bet_percentage * (sizing_refactor*confidence_refactor)
         bet_amount = bankroll*bet_percentage
         if np.random.rand() < winning_prob:
             bankroll += bet_amount * (odds-1)
