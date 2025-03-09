@@ -20,7 +20,7 @@ def run_simulation():
         edge = uniform(0.05, 0.20)
         winning_prob = (1/odds)*(1+edge)
         sizing_refactor = 2/odds
-        confidence_refactor = odds/0.1
+        confidence_refactor = edge/0.1
         bet_percentage = default_bet_percentage * (sizing_refactor*confidence_refactor)
         bet_amount = bankroll*bet_percentage
         if np.random.rand() < winning_prob:
@@ -55,9 +55,9 @@ for sim in sims_to_plot:
 plt.plot(all_simulations[int(len(all_simulations)*0.025)], color="red")
 plt.plot(all_simulations[int(len(all_simulations)*0.975)], color="red")
 
-plt.title(f"{num_sims}S, {num_bets}B, {edge}E - {best}B, {mean}M, {worst}W - 95% [{low_percentile}, {high_percentile}]")
+plt.title(f"{num_sims}S, {num_bets}B, {best}B, {mean}M, {worst}W - 95% [{low_percentile}, {high_percentile}]")
 plt.xlabel("Bet number")
 plt.ylabel("Bankroll")
 plt.grid(True)
 
-plt.savefig(f'{num_sims}-simulations-{num_bets}-bets-{edge}-edge-adj-sizing-with-odds.png')
+plt.savefig(f'{num_sims}-simulations-{num_bets}-bets-adj-sizing-with-odds-conf.png')
