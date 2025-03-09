@@ -4,11 +4,10 @@ from tqdm import tqdm
 from random import uniform
 
 initial_bankroll = 1000
-highest_bet_percentage = 0.03
+default_bet_percentage = 0.02
 # odds = 2.5
 edge = 0.05
 #winning_prob = (1/odds)*(1+edge)
-losing_prob = 0.58
 num_bets = 2400
 num_sims = 100000
 
@@ -17,9 +16,10 @@ def run_simulation():
     bankroll_hostory = [bankroll]
 
     for _ in range(num_bets):
-        odds = uniform(1.2, 6.0)
+        odds = uniform(1.1, 6.0)
         winning_prob = (1/odds)*(1+edge)
-        bet_percentage = highest_bet_percentage - (0.004*odds) 
+        refactor = 2/odds
+        bet_percentage = default_bet_percentage * refactor
         bet_amount = bankroll*bet_percentage
         if np.random.rand() < winning_prob:
             bankroll += bet_amount * (odds-1)
@@ -58,4 +58,4 @@ plt.xlabel("Bet number")
 plt.ylabel("Bankroll")
 plt.grid(True)
 
-plt.savefig(f'{num_sims}-simulations-{num_bets}-bets-{edge}-edge-{bet_percentage}-bet-percent-{odds}-odds.png')
+plt.savefig(f'{num_sims}-simulations-{num_bets}-bets-{edge}-edge-adj-sizing-with-odds.png')
