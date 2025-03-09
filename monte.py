@@ -11,15 +11,16 @@ default_bet_percentage = 0.02
 #winning_prob = (1/odds)*(1+edge)
 num_bets = 2400
 num_sims = 100000
+edges = numpy.random.choice([0.05, 0.075, 0.1, 0.125, 0.15, 0.175, 0.2], p=[0.25, 0.2, 0.15, 0.15, 0.1, 0.1, 0.05], size=(2400))
 
 def run_simulation():
     bankroll = initial_bankroll
     bankroll_hostory = [bankroll]
 
-    for _ in range(num_bets):
+    for i in range(num_bets):
         odds = uniform(1.1, 6.0)
-        #edge = uniform(0.05, 0.20)
-        edge = numpy.random.choice([0.05, 0.075, 0.1, 0.125, 0.15, 0.175, 0.2], p=[0.25, 0.2, 0.15, 0.15, 0.1, 0.1, 0.05])
+        edge = edges[i]
+        #edge = numpy.random.choice([0.05, 0.075, 0.1, 0.125, 0.15, 0.175, 0.2], p=[0.25, 0.2, 0.15, 0.15, 0.1, 0.1, 0.05])
         winning_prob = (1/odds)*(1+edge)
         sizing_refactor = 2/odds
         confidence_refactor = edge/0.1
