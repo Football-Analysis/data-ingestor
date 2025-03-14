@@ -4,6 +4,9 @@ from ..config import Config as conf
 from ..data_models.observation import Observation
 from tqdm import tqdm
 from typing import List, Tuple
+from ..data_models.odds import Odds
+from ..data_models.team import Team
+
 
 def engineer_all_features():
     mfc = MongoFootballClient(conf.MONGO_URL)
@@ -192,18 +195,3 @@ def calculate_local_form(matches: List[Match], home: bool = True) -> List[str]:
                 form.append("L")
     form = (form + ["N"] * 5)[:5]
     return form
-
-    
-    
-
-        
-
-
-            
-
-
-
-    
-
-
-
