@@ -8,6 +8,8 @@ class Config:
     FOOTBALL_API_KEY: str = os.environ.get("FOOTABLL_API_KEY", "NOT_SET")
     ODDS_API_KEY: str = os.environ.get("ODDS_API_KEY", "NOT_SET")
 
+    BETFAIR_API_KEY = os.environ.get("BETFAIR_API_KEY")
+
     MONGO_URL = "mongodb://localhost:27017/"
 
     CURRENT_SEASON = 2024

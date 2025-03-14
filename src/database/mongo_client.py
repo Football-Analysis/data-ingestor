@@ -143,7 +143,6 @@ class MongoFootballClient:
     
     def get_all_teams(self):
         cursor = self.league_collection.find()
-
         all_teams = set()
         for league in cursor:
             teams = list(league["teams"].keys())
@@ -151,6 +150,26 @@ class MongoFootballClient:
             all_teams.update(teams)
         return list(all_teams)
     
+    def get_af_teams(self) -> List[Team]:
+        cursor = self.team_collection.find({"source": "af"})
+        all_teams = []
+        for team in cursor:
+            del team["_id"]
+            all_teams.append(Team(**team))
+        return all_teams
+    
+    def check_oa_team(self, name) -> bool:
+        team = self.team_collection.find_one({"source": "oa",
+                                            "name": name})
+        if team is not None:
+            return True
+        return False
+
+    def get_oa_id(self, name):
+        team = self.team_collection.find_one({"source": "oa",
+                                              "name": name})
+        return team["id"]
+
     def add_team(self, team):
         self.team_collection.insert_one(team.__dict__)
 
