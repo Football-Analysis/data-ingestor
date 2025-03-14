@@ -63,10 +63,7 @@ class MongoFootballClient:
         print("Querying all matches")
         cursor = self.match_collection.find({})
         matches = []
-        print("Casting all results as matches")
-        matches = list(map(self.cast_mongo_to_match, cursor))
         for match in cursor:
-            del match["_id"]
             matches.append(Match(**match))
         return matches
     
@@ -76,16 +73,10 @@ class MongoFootballClient:
             "result": {"$ne": "N/A"}
         })
         matches = []
-        print("Casting all results as matches")
-        matches = list(map(self.cast_mongo_to_match, cursor))
         for match in cursor:
-            del match["_id"]
-            matches.append(Match(**match))
+            matches.append(Match.from_mongo_doc(match))
         return matches
     
-    def cast_mongo_to_match(self, match):
-        del match["_id"]
-        return Match(**match)
     
     def get_league(self, league_id: int, season:int) -> League:
         league = self.league_collection.find_one({
@@ -94,8 +85,7 @@ class MongoFootballClient:
         })
         if league is None:
             return False
-        del league["_id"]
-        return League(**league)
+        return League.from_mongo_doc(league)
     
     def check_observation(self, match_id):
         obs = self.observation_collection.find_one({
@@ -103,12 +93,7 @@ class MongoFootballClient:
         })
         if obs is None:
             return False
-        del obs["_id"]
-        return Observation(**obs)
-
-    def cast_to_league(self, league):
-        del league["_id"]
-        return League(**league)
+        return Observation.from_mongo_doc(obs)
     
     def get_last_5_games(self, league: int, season: int, team: int, game_week: int, home: bool = True) -> List[Match]:
         gen_filter = {
@@ -125,8 +110,7 @@ class MongoFootballClient:
 
         matches_to_return = []
         for match in matches:
-            del match["_id"]
-            matches_to_return.append(Match(**match))
+            matches_to_return.append(Match.from_mongo_doc(match))
         
         if len(matches_to_return) < 5:
             return matches_to_return
@@ -142,12 +126,10 @@ class MongoFootballClient:
         return False
     
     def get_all_teams(self):
-        cursor = self.league_collection.find()
-        all_teams = set()
-        for league in cursor:
-            teams = list(league["teams"].keys())
-            teams = [int(x) for x in teams]
-            all_teams.update(teams)
+        cursor = self.team_collection.find()
+        all_teams = []
+        for team in cursor:
+            all_teams.append(Team.from_mongo_doc(team))
         return list(all_teams)
     
     def get_af_teams(self) -> List[Team]:

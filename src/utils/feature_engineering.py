@@ -195,3 +195,8 @@ def calculate_local_form(matches: List[Match], home: bool = True) -> List[str]:
                 form.append("L")
     form = (form + ["N"] * 5)[:5]
     return form
+
+def map_id(team_name: str) -> int:
+    mfc = MongoFootballClient(conf.MONGO_URL)
+    teams = mfc.get_all_teams()
+    print(len(teams))

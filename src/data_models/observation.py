@@ -45,3 +45,9 @@ class Observation:
     away_api_pred: int
     api_pred: int
     result: str
+
+    @staticmethod
+    def from_mongo_doc(mongo_doc: dict) -> "Observation":
+        if "_id" in mongo_doc:
+            del mongo_doc["_id"]
+            return Observation(**mongo_doc)
