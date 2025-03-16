@@ -6,6 +6,7 @@ from tqdm import tqdm
 from typing import List, Tuple
 from ..data_models.odds import Odds
 from ..data_models.team import Team
+import jaro
 
 
 def engineer_all_features():
@@ -196,7 +197,91 @@ def calculate_local_form(matches: List[Match], home: bool = True) -> List[str]:
     form = (form + ["N"] * 5)[:5]
     return form
 
-def map_id(team_name: str) -> int:
+def map_ids():
     mfc = MongoFootballClient(conf.MONGO_URL)
-    teams = mfc.get_all_teams()
-    print(len(teams))
+    af_teams = mfc.get_all_teams()
+    betfair_teams = mfc.get_betfair_team_names()
+    complete_matches = 0
+    for betfair_team in tqdm(betfair_teams):
+        if isinstance(betfair_team, str):
+            closest_match = None
+            closest_score = 0
+            for af_team in af_teams:
+                if af_team.name == betfair_team and closest_score < 1:
+                    closest_match = af_team
+                    closest_score = 1
+                    complete_matches +=1
+                else:
+                    match = jaro.jaro_winkler_metric(af_team.name, betfair_team)
+                    if match > closest_score:
+                        closest_match = af_team
+                        closest_score = match
+
+            if closest_score >= 0.95:
+                team = Team(id=closest_match.id,
+                            name=betfair_team,
+                            source="betfair")
+                mfc.add_team(team)
+    print(complete_matches/len(betfair_teams))
+
+
+def map_odd_ids():
+    mfc = MongoFootballClient(conf.MONGO_URL)
+    odds = mfc.get_odds()
+    for odd in tqdm(odds):
+        changed = False
+        original_home_team = odd.home_team
+        if isinstance(original_home_team, str):
+            home_team = mfc.get_team_from_name(odd.home_team)
+            if home_team is not None:
+                odd.home_team = home_team
+                changed=True
+
+        original_away_team = odd.away_team
+        if isinstance(original_away_team, str):
+            away_team = mfc.get_team_from_name(odd.away_team)
+            if away_team is not None:
+                odd.away_team = away_team
+                changed=True
+        
+        if isinstance(odd.away_team, str) ^ isinstance(odd.home_team, str):
+            if isinstance(odd.home_team, str):
+                match = mfc.get_match(odd.date, away_team=odd.away_team)
+                if match is not None:
+                    home_team = match.home_team
+                    odd.home_team = home_team
+                    mfc.add_team(Team(home_team, original_home_team, "betfair"))
+                    changed=True
+                else:
+                    print("Deleting Cup game")
+                    mfc.del_odd(odd.date, original_home_team)
+
+            elif isinstance(odd.away_team, str):
+                match = mfc.get_match(odd.date, home_team=odd.home_team)
+                if match is not None:
+                    away_team = match.away_team
+                    odd.away_team = away_team
+                    mfc.add_team(Team(away_team, original_away_team, "betfair"))
+                    changed=True
+                else:
+                    print(f"Deleting Cup game, {odd.date} with home team {odd.home_team}")
+                    mfc.del_odd(odd.date, original_home_team)
+        
+        if changed:
+            print("Updating odds")
+            mfc.update_odd(odd, original_home_team)
+
+
+
+
+    
+   
+   
+   
+   
+   
+    # likeness_scores = []
+    # for team in af_teams:
+    #     likeness_scores.append(jaro.jaro_winkler_metric(team.name, team_name))
+    # index_max = max(range(len(likeness_scores)), key=likeness_scores.__getitem__)
+    # print(teams[index_max].name)

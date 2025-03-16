@@ -125,7 +125,7 @@ class MongoFootballClient:
             return True
         return False
     
-    def get_all_teams(self):
+    def get_all_teams(self) -> List[Team]:
         cursor = self.team_collection.find()
         all_teams = []
         for team in cursor:
@@ -158,13 +158,59 @@ class MongoFootballClient:
     def add_odd(self, odd: Odds):
         self.odds_collection.insert_one(odd.__dict__)
 
-    def update_odd(self, odd: Odds):
-        query = {"date": odd.date, "home_team": odd.home_team}
+    def update_odd(self, odd: Odds, home_team=None):
+        if home_team is None:
+            query = {"date": odd.date, "home_team": odd.home_team}
+        else:
+            query = {"date": odd.date, "home_team": home_team}
         update_values = {"$set": odd.__dict__}
         self.odds_collection.update_one(query , update_values)
 
+    def get_betfair_team_names(self):
+        home_teams = self.odds_collection.distinct("home_team")
+        away_team = self.odds_collection.distinct("away_team")
+        return list(set(home_teams).union(away_team))
     
+    def get_team_from_name(self, team_name, source=None):
+        if source is None:
+            team = self.team_collection.find_one({"name": team_name})
+        else:
+            team = self.team_collection.find_one({"name": team_name, "source": source})
+        if team is None:
+            return None
+        else:
+            team = Team.from_mongo_doc(team)
+            return team.id
         
+    def get_betfair_team(self,team_name):
+        team = self.team_collection.find_one({"name": team_name, "source": "betfair"})
+        if team is None:
+             return False
+        else:
+             return True
 
+    def get_odds(self) -> List[Odds]:
+        odds = self.odds_collection.find()
+        odds_to_return = []
+        for odd in odds:
+            odds_to_return.append(Odds.from_mongo_doc(odd))
+        return odds_to_return
+    
+    def get_match(self, date, home_team=None, away_team=None):
+        if home_team is None and away_team is None:
+            raise RuntimeError("When filtering for a match both home and away teams cannot be None")
+
+        if home_team is None:
+            match = self.match_collection.find_one({"date": date, "away_team": away_team})
+        else:
+            match = self.match_collection.find_one({"date": date, "home_team": home_team})
+        
+        if match is None:
+            return None
+        return Match.from_mongo_doc(match)
+    
+    def del_odd(self, date, home_team):
+        self.odds_collection.delete_one({"date": date, "home_team": home_team})
+        
 
 

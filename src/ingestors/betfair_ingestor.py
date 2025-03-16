@@ -29,7 +29,6 @@ class BetfairClient(Ingestor):
             raise RuntimeError("BETFAIR_PASSWORD environment variable must be set")
         
         self.trading = APIClient(self.username,
-                                 
                                  self.password,
                                  app_key=self.api_key,
                                  certs="/home/tristan/betfair-cert/")
@@ -40,9 +39,9 @@ class BetfairClient(Ingestor):
         market_ids = {}
         processed_mids = []
         saved_odds = 0
-        file_date = datetime(2016, 5, 29)
-        while file_date.year < 2017:
-            print(f"Down loading files for {file_date.year}, {file_date.month}, {file_date.day}")
+        file_date = datetime(2023, 1, 1)
+        while file_date.year < 2025:
+            print(f"Downloading files for {file_date.year}, {file_date.month}, {file_date.day}")
             try:
                 months_list = self.trading.historic.get_file_list("Soccer",
                                                         "Basic Plan",
@@ -68,9 +67,7 @@ class BetfairClient(Ingestor):
 
 
             file_date += timedelta(1)
-            print("Decoding files for 2023")
             for data_file in months_list:
-
                 file_name = None
                 while file_name is None:
                     try:
@@ -119,7 +116,7 @@ class BetfairClient(Ingestor):
                                 if not skip:
                                     market_ids[mid] = runner_objects
                                     market_ids[mid]["started"] = False
-                                    market_ids[mid]["startTime"] = market["marketDefinition"]["marketTime"][:-2]+ "+00:00"
+                                    market_ids[mid]["startTime"] = market["marketDefinition"]["marketTime"][:-5]+ "+00:00"
                         elif mid not in processed_mids:
                             if not market_ids[mid]["started"]:
                                 if "rc" in market:
@@ -139,11 +136,13 @@ class BetfairClient(Ingestor):
                                                     home_team = runner["name"]
                                                     home_odds = runner["odds"]
                                                 elif not runner["home"]:
+                                                    away_team = runner["name"]
                                                     away_odds = runner["odds"]
                                                 else:
                                                     raise RuntimeError("Couldn't find home away and draw odds")
                                         odd_to_save = Odds(date=market_ids[mid]["startTime"],
                                                             home_team=home_team,
+                                                            away_team=away_team,
                                                             home_odds=home_odds,
                                                             away_odds=away_odds,
                                                             draw_odds=draw_odds)
