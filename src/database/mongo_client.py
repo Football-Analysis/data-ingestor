@@ -132,6 +132,15 @@ class MongoFootballClient:
             all_teams.append(Team.from_mongo_doc(team))
         return list(all_teams)
     
+    def get_all_teams_from_leagues(self) -> List[int]:
+        cursor = self.league_collection.find()
+        all_teams = set()
+        for league in cursor:
+            teams = list(league["teams"].keys())
+            teams = [int(x) for x in teams]
+            all_teams.update(teams)
+        return list(all_teams)
+    
     def get_af_teams(self) -> List[Team]:
         cursor = self.team_collection.find({"source": "af"})
         all_teams = []
