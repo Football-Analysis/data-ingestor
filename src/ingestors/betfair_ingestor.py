@@ -1,8 +1,6 @@
 from requests import post, get
 import os
-from betfairlightweight import APIClient, filters
-from betfairlightweight.resources.bettingresources import EventResult, MarketBook, RunnerBook
-from typing import List
+from betfairlightweight import APIClient
 from .ingestor import Ingestor
 import bz2
 import json
@@ -29,20 +27,19 @@ class BetfairClient(Ingestor):
             raise RuntimeError("BETFAIR_PASSWORD environment variable must be set")
         
         self.trading = APIClient(self.username,
-                                 
                                  self.password,
                                  app_key=self.api_key,
-                                 certs="/home/tristan/betfair-cert/")
+                                 certs="/home/ubuntu/betfair-cert/")
         
         self.trading.login()
     
-    def get_downloaded_data(self):
+    def get_downloaded_data(self, year, month, day):
         market_ids = {}
         processed_mids = []
         saved_odds = 0
-        file_date = datetime(2016, 5, 29)
-        while file_date.year < 2017:
-            print(f"Down loading files for {file_date.year}, {file_date.month}, {file_date.day}")
+        file_date = datetime(year, month, day)
+        while file_date.year < 2025:
+            print(f"Downloading files for {file_date.year}, {file_date.month}, {file_date.day}")
             try:
                 months_list = self.trading.historic.get_file_list("Soccer",
                                                         "Basic Plan",
@@ -68,26 +65,28 @@ class BetfairClient(Ingestor):
 
 
             file_date += timedelta(1)
-            print("Decoding files for 2023")
             for data_file in months_list:
-
                 file_name = None
                 while file_name is None:
                     try:
-                        file_name = self.trading.historic.download_file(data_file)
+                        file_name = self.trading.historic.download_file(data_file, conf.BETFAIR_DATA_DIR)
                     except:
                         print("Probably a SSL error, try again in 30 seconds")
                         sleep(30)
 
                 binary_file = bz2.BZ2File(file_name, 'rb')
                 data_list = []
-                for line in binary_file:
-                    my_json = line.decode('utf8').replace("'", '"')
-                    try:
-                        data = json.loads(my_json)
-                        data_list.append(data)
-                    except:
-                        print(f"Failed to parse json line in file {file_name}, ignoring this line")
+                try:
+                    for line in binary_file:
+                        my_json = line.decode('utf8').replace("'", '"')
+                        try:
+                            data = json.loads(my_json)
+                            data_list.append(data)
+                        except:
+                            print(f"Failed to parse json line in file {file_name}, ignoring this line")
+                except:
+                    print(f"Failed to parse this file {file_name}, ignoring this file")
+
                 
                 for data_point in data_list:
                     mc = data_point["mc"]
@@ -119,7 +118,7 @@ class BetfairClient(Ingestor):
                                 if not skip:
                                     market_ids[mid] = runner_objects
                                     market_ids[mid]["started"] = False
-                                    market_ids[mid]["startTime"] = market["marketDefinition"]["marketTime"][:-2]+ "+00:00"
+                                    market_ids[mid]["startTime"] = market["marketDefinition"]["marketTime"][:-5]+ "+00:00"
                         elif mid not in processed_mids:
                             if not market_ids[mid]["started"]:
                                 if "rc" in market:
@@ -139,11 +138,13 @@ class BetfairClient(Ingestor):
                                                     home_team = runner["name"]
                                                     home_odds = runner["odds"]
                                                 elif not runner["home"]:
+                                                    away_team = runner["name"]
                                                     away_odds = runner["odds"]
                                                 else:
                                                     raise RuntimeError("Couldn't find home away and draw odds")
                                         odd_to_save = Odds(date=market_ids[mid]["startTime"],
                                                             home_team=home_team,
+                                                            away_team=away_team,
                                                             home_odds=home_odds,
                                                             away_odds=away_odds,
                                                             draw_odds=draw_odds)

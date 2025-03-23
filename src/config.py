@@ -14,6 +14,8 @@ class Config:
 
     CURRENT_SEASON = 2024
 
+    BETFAIR_DATA_DIR = "/home/ubuntu/betfair-data"
+
     odds_seasons = [2020,2021,2022,2023,2024]
     odds_dates = {
         2020: {

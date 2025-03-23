@@ -63,10 +63,7 @@ class MongoFootballClient:
         print("Querying all matches")
         cursor = self.match_collection.find({})
         matches = []
-        print("Casting all results as matches")
-        matches = list(map(self.cast_mongo_to_match, cursor))
         for match in cursor:
-            del match["_id"]
             matches.append(Match(**match))
         return matches
     
@@ -76,16 +73,10 @@ class MongoFootballClient:
             "result": {"$ne": "N/A"}
         })
         matches = []
-        print("Casting all results as matches")
-        matches = list(map(self.cast_mongo_to_match, cursor))
         for match in cursor:
-            del match["_id"]
-            matches.append(Match(**match))
+            matches.append(Match.from_mongo_doc(match))
         return matches
     
-    def cast_mongo_to_match(self, match):
-        del match["_id"]
-        return Match(**match)
     
     def get_league(self, league_id: int, season:int) -> League:
         league = self.league_collection.find_one({
@@ -94,8 +85,7 @@ class MongoFootballClient:
         })
         if league is None:
             return False
-        del league["_id"]
-        return League(**league)
+        return League.from_mongo_doc(league)
     
     def check_observation(self, match_id):
         obs = self.observation_collection.find_one({
@@ -103,12 +93,7 @@ class MongoFootballClient:
         })
         if obs is None:
             return False
-        del obs["_id"]
-        return Observation(**obs)
-
-    def cast_to_league(self, league):
-        del league["_id"]
-        return League(**league)
+        return Observation.from_mongo_doc(obs)
     
     def get_last_5_games(self, league: int, season: int, team: int, game_week: int, home: bool = True) -> List[Match]:
         gen_filter = {
@@ -125,8 +110,7 @@ class MongoFootballClient:
 
         matches_to_return = []
         for match in matches:
-            del match["_id"]
-            matches_to_return.append(Match(**match))
+            matches_to_return.append(Match.from_mongo_doc(match))
         
         if len(matches_to_return) < 5:
             return matches_to_return
@@ -141,7 +125,14 @@ class MongoFootballClient:
             return True
         return False
     
-    def get_all_teams(self):
+    def get_all_teams(self) -> List[Team]:
+        cursor = self.team_collection.find()
+        all_teams = []
+        for team in cursor:
+            all_teams.append(Team.from_mongo_doc(team))
+        return list(all_teams)
+    
+    def get_all_teams_from_leagues(self) -> List[int]:
         cursor = self.league_collection.find()
         all_teams = set()
         for league in cursor:
@@ -176,13 +167,66 @@ class MongoFootballClient:
     def add_odd(self, odd: Odds):
         self.odds_collection.insert_one(odd.__dict__)
 
-    def update_odd(self, odd: Odds):
-        query = {"date": odd.date, "home_team": odd.home_team}
+    def update_odd(self, odd: Odds, home_team=None):
+        if home_team is None:
+            query = {"date": odd.date, "home_team": odd.home_team}
+        else:
+            query = {"date": odd.date, "home_team": home_team}
         update_values = {"$set": odd.__dict__}
         self.odds_collection.update_one(query , update_values)
 
+    def get_betfair_team_names(self):
+        home_teams = self.odds_collection.distinct("home_team")
+        away_team = self.odds_collection.distinct("away_team")
+        return list(set(home_teams).union(away_team))
     
+    def get_team_from_name(self, team_name, source=None):
+        if source is None:
+            team = self.team_collection.find_one({"name": team_name})
+        else:
+            team = self.team_collection.find_one({"name": team_name, "source": source})
+        if team is None:
+            return None
+        else:
+            team = Team.from_mongo_doc(team)
+            return team.id
         
+    def get_betfair_team(self,team_name):
+        team = self.team_collection.find_one({"name": team_name, "source": "betfair"})
+        if team is None:
+             return False
+        else:
+             return True
 
+    def get_odds(self, processed=False) -> List[Odds]:
+        if processed:
+            mongo_filter = {"$or": [
+                {"home_team": {"$type": 2}}, 
+                {"away_team": {"$type": 2}}]
+                }
+        else:
+             mongo_filter = {}
+        odds = self.odds_collection.find(mongo_filter)
+        odds_to_return = []
+        for odd in odds:
+            odds_to_return.append(Odds.from_mongo_doc(odd))
+        return odds_to_return
+    
+    def get_match(self, date, home_team=None, away_team=None):
+        if home_team is None and away_team is None:
+            raise RuntimeError("When filtering for a match both home and away teams cannot be None")
+
+        if home_team is None:
+            match = self.match_collection.find_one({"date": date, "away_team": away_team})
+        else:
+            match = self.match_collection.find_one({"date": date, "home_team": home_team})
+        
+        if match is None:
+            return None
+        return Match.from_mongo_doc(match)
+    
+    def del_odd(self, date, home_team):
+        self.odds_collection.delete_one({"date": date, "home_team": home_team})
+        
 
 
