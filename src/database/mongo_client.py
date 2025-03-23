@@ -198,8 +198,15 @@ class MongoFootballClient:
         else:
              return True
 
-    def get_odds(self) -> List[Odds]:
-        odds = self.odds_collection.find()
+    def get_odds(self, processed=False) -> List[Odds]:
+        if processed:
+            mongo_filter = {"$or": [
+                {"home_team": {"$type": 2}}, 
+                {"away_team": {"$type": 2}}]
+                }
+        else:
+             mongo_filter = {}
+        odds = self.odds_collection.find(mongo_filter)
         odds_to_return = []
         for odd in odds:
             odds_to_return.append(Odds.from_mongo_doc(odd))

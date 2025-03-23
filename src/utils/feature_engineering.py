@@ -227,7 +227,7 @@ def map_ids():
 
 def map_odd_ids():
     mfc = MongoFootballClient(conf.MONGO_URL)
-    odds = mfc.get_odds()
+    odds = mfc.get_odds(True)
     for odd in tqdm(odds):
         changed = False
         original_home_team = odd.home_team

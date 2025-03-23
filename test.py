@@ -4,6 +4,7 @@ from src.config import Config as conf
 from src.ingestors.betfair_ingestor import BetfairClient
 from src.ingestors.match_ingestor import ApiFootball
 from src.data_models.team import Team
+from tqdm import tqdm
 
 mfc = MongoFootballClient(conf.MONGO_URL)
 af = ApiFootball(conf.FOOTBALL_API_URL, conf.FOOTBALL_API_KEY)
@@ -13,13 +14,13 @@ af = ApiFootball(conf.FOOTBALL_API_URL, conf.FOOTBALL_API_KEY)
 #print(team)
 # matches = mfc.get_finished_matches()
 # print(matches[0])
+#odds_to_process = mfc.get_odds(True)
+#print(len(odds_to_process))
+# bfc = BetfairClient("" ,conf.BETFAIR_API_KEY)
+# bfc.get_downloaded_data(2016,1,1)
 
-#bfc = BetfairClient("" ,conf.BETFAIR_API_KEY)
-
-#bfc.get_downloaded_data()
-
-teams = mfc.get_all_teams_from_leagues()
-for team_id in teams:
-    team_name = af.get_team_name(team_id)
-    team_to_save = Team(team_id, team_name, "af")
-    mfc.add_team(team_to_save)
+#teams = mfc.get_all_teams_from_leagues()
+#for team_id in tqdm(teams):
+#    team_name = af.get_team_name(team_id)
+#    team_to_save = Team(team_id, team_name, "af")
+#    mfc.add_team(team_to_save)
