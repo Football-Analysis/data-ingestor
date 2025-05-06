@@ -1,50 +1,32 @@
 from dataclasses import dataclass
+from typing import Optional
 
 
 @dataclass
 class Observation:
     match_id: str
-    away_general_wins: int
-    away_general_draws: int
-    away_general_losses: int
-    away_general_unknown: int
-    away_general_5: str
-    away_general_4: str
-    away_general_3: str
-    away_general_2: str
-    away_general_1: str
-    home_general_wins: int
-    home_general_draws: int
-    home_general_losses: int
-    home_general_unknown: int
-    home_general_5: str
-    home_general_4: str
-    home_general_3: str
-    home_general_2: str
-    home_general_1: str
-    home_home_wins: int
-    home_home_draws: int
-    home_home_losses: int
-    home_home_unknown: int
-    home_home_5: str
-    home_home_4: str
-    home_home_3: str
-    home_home_2: str
-    home_home_1: str
-    away_away_wins: int
-    away_away_draws: int
-    away_away_losses: int
-    away_away_unknown: int
-    away_away_5: str
-    away_away_4: str
-    away_away_3: str
-    away_away_2: str
-    away_away_1: str
-    home_api_pred: int
-    draw_api_pred: int
-    away_api_pred: int
-    api_pred: int
-    result: str
+    home_ppg: float
+    home_plfg: float
+    away_ppg: float
+    away_plfg: float
+    home_general_difficulty: float
+    away_general_difficulty: float
+    home_relative_form: float
+    away_relative_form: float
+    points_diff: float
+    plfg_diff: float
+    home_ppd: float
+    away_ppd: float
+    ppd_diff: float
+    h2h_games: int
+    h2h_diff: float
+    h2h_gd_diff: float
+    before_gw_ten: int
+    home_trend: int
+    home_trend_diff: float
+    away_trend: int
+    away_trend_diff: float
+    result: Optional[str]
 
     @staticmethod
     def from_mongo_doc(mongo_doc: dict) -> "Observation":
