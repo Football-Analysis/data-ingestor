@@ -10,11 +10,12 @@ class Config:
 
     BETFAIR_API_KEY = os.environ.get("BETFAIR_API_KEY")
 
-    MONGO_URL = "mongodb://localhost:27017/"
+    MONGO_HOST = os.environ.get("MONGO_HOST", "localhost")
+    MONGO_URL = f"mongodb://{MONGO_HOST}:27017/"
 
     CURRENT_SEASON = 2024
 
-    BETFAIR_DATA_DIR = "/home/ubuntu/betfair-data"
+    BETFAIR_DATA_DIR = os.environ.get("BETFAIR_CERT_DIR", "/home/ubuntu/betfair-cert/")
 
     odds_seasons = [2020,2021,2022,2023,2024]
     odds_dates = {

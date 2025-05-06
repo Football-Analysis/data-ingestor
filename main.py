@@ -3,11 +3,19 @@ from src.database.mongo_client import MongoFootballClient
 from src.data_models.league import League
 from src.config import Config as conf
 from src.utils.feature_engineering import engineer_all_features, create_training_data
-from tqdm import tqdm
+from time import sleep
+import schedule
+from src.utils.ingest_utils import update_matches_and_create_next_obs
+from pytz import timezone
 
 if __name__ == "__main__":
     af = ApiFootball(base_url=conf.FOOTBALL_API_URL, api_key=conf.FOOTBALL_API_KEY)
     mfc = MongoFootballClient(conf.MONGO_URL)
 
-    af.get_leagues()
-    
+    schedule.every().day.at("00:01", timezone("GMT")).do(update_matches_and_create_next_obs)
+
+    print("Starting scheduled jobs")
+    update_matches_and_create_next_obs()
+    while True:
+        schedule.run_pending()
+        sleep(1)

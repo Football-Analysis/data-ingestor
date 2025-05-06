@@ -1,15 +1,15 @@
 from dataclasses import dataclass
-from typing import List
 
 
 @dataclass
-class League:
+class Standing:
     league_id: int
     season: int
-    teams: List[int]
+    date: str
+    standings: dict
 
     @staticmethod
-    def from_mongo_doc(mongo_doc: dict) -> "League":
+    def from_mongo_doc(mongo_doc: dict) -> "Standing":
         if "_id" in mongo_doc:
             del mongo_doc["_id"]
-            return League(**mongo_doc)
+            return Standing(**mongo_doc)
