@@ -16,4 +16,3 @@ class Odds:
         if "_id" in mongo_doc:
             del mongo_doc["_id"]
             return Odds(**mongo_doc)
-    

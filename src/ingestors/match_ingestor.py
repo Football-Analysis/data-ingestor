@@ -14,20 +14,20 @@ class ApiFootball(Ingestor):
         self.base_headers = {'x-apisports-key': self.api_key}
         self.start_minute = time()
 
-    def get_teams_per_league(self, league_id: int, season:int) -> League:
+    def get_teams_per_league(self, league_id: int, season: int) -> League:
         endpoint = f'{self.base_url}/teams'
         params = {"league": league_id, "season": season}
         teams = get(endpoint, headers=self.base_headers, params=params)
         self.check_api_limits(teams.headers)
         teams_data = teams.json()["response"]
-        
+
         teams_to_save = []
         for team in teams_data:
             team_id = team["team"]["id"]
             teams_to_save.append(team_id)
-        
+
         return League(league_id, season, teams_to_save)
-    
+
     def get_all_leagues(self):
         endpoint = f"{self.base_url}/leagues"
         params = {"type": "league"}
@@ -40,6 +40,67 @@ class ApiFootball(Ingestor):
             league_id = league["league"]["id"]
             for season in league["seasons"]:
                 if season["year"] > 2010:
+                    leagues_to_get.append((league_id, season["year"]))
+        return leagues_to_get
+
+    def get_all_leagues_lineups(self):
+        endpoint = f"{self.base_url}/leagues"
+        params = {"type": "league"}
+        leagues = get(endpoint, headers=self.base_headers, params=params)
+
+        self.check_api_limits(leagues.headers)
+        league_data = leagues.json()
+        leagues_to_get = []
+        for league in league_data["response"]:
+            league_id = league["league"]["id"]
+            for season in league["seasons"]:
+                if season["year"] > 2010 and season["coverage"]["fixtures"]["lineups"]:
+                    leagues_to_get.append((league_id, season["year"]))
+        return leagues_to_get
+
+    def get_player_stats_leagues(self):
+        endpoint = f"{self.base_url}/leagues"
+        params = {"type": "league"}
+        leagues = get(endpoint, headers=self.base_headers, params=params)
+
+        self.check_api_limits(leagues.headers)
+        league_data = leagues.json()
+        leagues_to_get = []
+        for league in league_data["response"]:
+            league_id = league["league"]["id"]
+            for season in league["seasons"]:
+                if season["year"] > 2010 and season["coverage"]["fixtures"]["statistics_players"]:
+                    leagues_to_get.append((league_id, season["year"]))
+        return leagues_to_get
+
+    def get_injury_leagues(self):
+        endpoint = f"{self.base_url}/leagues"
+        params = {"type": "league"}
+        leagues = get(endpoint, headers=self.base_headers, params=params)
+
+        self.check_api_limits(leagues.headers)
+        league_data = leagues.json()
+        leagues_to_get = []
+        for league in league_data["response"]:
+            league_id = league["league"]["id"]
+            for season in league["seasons"]:
+                if season["year"] > 2010 and season["coverage"]["injuries"]:
+                    leagues_to_get.append((league_id, season["year"]))
+        return leagues_to_get
+
+    def get_max_leagues(self):
+        endpoint = f"{self.base_url}/leagues"
+        params = {"type": "league"}
+        leagues = get(endpoint, headers=self.base_headers, params=params)
+
+        self.check_api_limits(leagues.headers)
+        league_data = leagues.json()
+        leagues_to_get = []
+        for league in league_data["response"]:
+            league_id = league["league"]["id"]
+            for season in league["seasons"]:
+                if season["year"] > 2010 and season["coverage"]["injuries"] \
+                   and season["coverage"]["fixtures"]["statistics_players"]:
                     leagues_to_get.append((league_id, season["year"]))
         return leagues_to_get
 
@@ -59,7 +120,7 @@ class ApiFootball(Ingestor):
         for league in league_data["response"]:
             league_id = league["league"]["id"]
             for season in league["seasons"]:
-                if season["coverage"]["fixtures"]["events"] == True and season["year"] > 2010:
+                if season["coverage"]["fixtures"]["events"] and season["year"] > 2010:
                     leagues_to_get.append((league_id, season["year"]))
                     if league_id not in league_ids:
                         print(league["league"]["name"])
@@ -96,7 +157,7 @@ class ApiFootball(Ingestor):
         self.check_api_limits(league.headers)
         league_name = league.json()["response"][0]["league"]["name"]
         return league_name
-    
+
     def check_api_limits(self, headers):
         try:
             requests_left_day = int(headers["x-ratelimit-requests-remaining"])
@@ -105,7 +166,8 @@ class ApiFootball(Ingestor):
             requests_left_day = 1001
             requests_left_min = 101
             print(headers)
-        
+            print(e)
+
         if requests_left_min == 449:
             self.start_minute = time()
         else:
@@ -116,10 +178,10 @@ class ApiFootball(Ingestor):
             if requests_left_day < 50:
                 raise RuntimeError("Daily API limit reached for API-Football. Please come back tomorrow")
             if requests_left_min < 3:
-                print(f"Hit API Rate limit, waiting until end of minute")
+                print("Hit API Rate limit, waiting until end of minute")
                 time_left = 60 - (time() - self.start_minute)
-                sleep(time_left+1)
-        
+                sleep(time_left + 1)
+
             if time() - self.start_minute > 60:
                 self.start_minute = time()
 
@@ -139,7 +201,20 @@ class ApiFootball(Ingestor):
             return league.json()["response"][0]["seasons"][0]["year"]
         except:
             return None
-        
+
+    def get_current_season_injury(self, league_id):
+        endpoint = f"{self.base_url}/leagues"
+        params = {"id": league_id, "current": "true"}
+        league = get(endpoint, headers=self.base_headers, params=params)
+        self.check_api_limits(league.headers)
+        try:
+            season = league.json()["response"][0]["seasons"][0]
+            if season["year"] > 2010 and season["coverage"]["fixtures"]["lineups"]:
+                return True
+        except:
+            return False
+        return False
+
     def get_h2h(self, team1_id, team2_id, league_id, season) -> List[H2H]:
         endpoint = f"{self.base_url}/fixtures/headtohead"
         params = {"h2h": f"{team1_id}-{team2_id}", "league": league_id, "season": season}
@@ -147,7 +222,7 @@ class ApiFootball(Ingestor):
         self.check_api_limits(h2h.headers)
         h2h = h2h.json()["response"]
 
-        params = {"h2h": f"{team1_id}-{team2_id}", "league": league_id, "season": season-1}
+        params = {"h2h": f"{team1_id}-{team2_id}", "league": league_id, "season": season - 1}
         h2h_last_season = get(endpoint, headers=self.base_headers, params=params)
         self.check_api_limits(h2h_last_season.headers)
         h2h_last_season = h2h_last_season.json()["response"]
