@@ -12,4 +12,3 @@ class Team:
         if "_id" in mongo_doc:
             del mongo_doc["_id"]
             return Team(**mongo_doc)
-

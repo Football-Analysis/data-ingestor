@@ -1,12 +1,8 @@
-from src.utils.feature_engineering import create_standings, update_table, create_obs_from_match, update_obs
+from src.utils.feature_engineering import create_standings, create_obs_from_match
 from src.database.mongo_client import MongoFootballClient
 from src.config import Config as conf
-from src.ingestors.betfair_ingestor import BetfairClient
 from src.ingestors.match_ingestor import ApiFootball
-from src.data_models.team import Team
 from tqdm import tqdm
-from src.data_models.match import Match
-from time import sleep
 
 
 def update_matches_and_create_next_obs():
