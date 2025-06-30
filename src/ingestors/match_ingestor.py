@@ -4,6 +4,7 @@ from .ingestor import Ingestor
 from ..data_models.match import Match
 from ..data_models.league import League
 from ..data_models.h2h import H2H
+from ..data_models.player import Player
 from time import sleep, time
 from ..utils.api_response_processors import process_raw_match
 
@@ -70,6 +71,21 @@ class ApiFootball(Ingestor):
             league_id = league["league"]["id"]
             for season in league["seasons"]:
                 if season["year"] > 2010 and season["coverage"]["fixtures"]["statistics_players"]:
+                    leagues_to_get.append((league_id, season["year"]))
+        return leagues_to_get
+    
+    def get_all_leagues(self):
+        endpoint = f"{self.base_url}/leagues"
+        params = {"type": "league"}
+        leagues = get(endpoint, headers=self.base_headers, params=params)
+
+        self.check_api_limits(leagues.headers)
+        league_data = leagues.json()
+        leagues_to_get = []
+        for league in league_data["response"]:
+            league_id = league["league"]["id"]
+            for season in league["seasons"]:
+                if season["current"] and season["coverage"]["fixtures"]["events"]:
                     leagues_to_get.append((league_id, season["year"]))
         return leagues_to_get
 
@@ -242,3 +258,31 @@ class ApiFootball(Ingestor):
                 result = "Draw"
             returned_h2h.append(H2H(result, home_team, home_goals, away_team, away_goals))
         return returned_h2h
+    
+    def get_player_stats(self, fixture_id: int) -> List[Player]:
+        endpoint = f"{self.base_url}/fixtures/players"
+        params = {"fixture": fixture_id}
+        player_stats = get(endpoint, headers=self.base_headers, params=params)
+        self.check_api_limits(player_stats.headers)
+        try:
+            if len(player_stats.json()["response"]) == 0:
+                return False
+        except:
+            return False
+        
+        player_processed_stats = []
+        for team in player_stats.json()["response"]:
+            players = team["players"]
+            team = team["team"]["id"]
+            for player in players:
+                player_id = player["player"]["id"]
+                if player["statistics"][0]["games"]["minutes"] is None:
+                    minutes = 0
+                else:
+                    minutes = player["statistics"][0]["games"]["minutes"]
+                if minutes > 45:
+                    started = True
+                else:
+                    started = False
+                player_processed_stats.append(Player(player_id=player_id, team=team, minutes=minutes, started=started))
+        return player_processed_stats

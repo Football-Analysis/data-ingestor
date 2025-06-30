@@ -41,12 +41,13 @@ def update_matches_and_create_next_obs():
     mfc.delete_next_matches()
     mfc.delete_next_observations()
     next_matches = []
-    for league in tqdm(leagues):
-        season = af.get_current_season(league)
-        gameweek = mfc.get_next_gameweek(league, season)
-        if gameweek is not None:
-            next_matches_leagues = mfc.get_next_matches(gameweek, season, league)
-            next_matches.extend(next_matches_leagues)
+    next_matches = mfc.get_next_matches()
+    # for league in tqdm(leagues):
+    #     season = af.get_current_season(league)
+    #     gameweek = mfc.get_next_gameweek(league, season)
+    #     if gameweek is not None:
+    #         next_matches_leagues = mfc.get_next_matches(gameweek, season, league)
+    #         next_matches.extend(next_matches_leagues)
     mfc.add_next_matches(next_matches)
 
     observations = []

@@ -5,10 +5,11 @@ from ..data_models.match import Match
 from ..data_models.observation import Observation
 from ..data_models.odds import Odds
 from ..data_models.standing import Standing
-from typing import List
+from ..data_models.player_stats import PlayerStats
+from typing import List, Optional
 from tqdm import tqdm
 from ..data_models.team import Team
-from time import gmtime, strftime
+from datetime import datetime, timedelta
 
 
 class MongoFootballClient:
@@ -28,6 +29,8 @@ class MongoFootballClient:
         self.next_observations_collection = self.football["next_observations"]
         self.standing_collection = self.football["standings"]
         self.test_standing_collection = self.football["test_standings"]
+        self.player_stats_collection = self.football["player_stats"]
+        self.test_player_stats_collection = self.football["test_player_stats"]
 
     def add_league(self, league: League):
         """Saves a list of teams that belonged to a certain league into mongo
@@ -295,7 +298,8 @@ class MongoFootballClient:
         self.odds_collection.delete_one({"date": date, "home_team": home_team})
 
     def get_next_gameweek(self, league_id, season):
-        time_now = strftime("%Y-%m-%dT%H:%M:%S+00:00", gmtime())
+        now = datetime.now()
+        time_now = now.strftime("%Y-%m-%dT%H:%M:%S+00:00")
         next_match = self.match_collection.find({
             "league.id": league_id,
             "season": season,
@@ -318,8 +322,11 @@ class MongoFootballClient:
             leagues_matches.append(Match.from_mongo_doc(match))
         return leagues_matches
 
-    def get_next_matches(self, gameweek, season, league_id):
-        matches = self.match_collection.find({"game_week": gameweek, "season": season, "league.id": league_id})
+    def get_next_matches(self):
+        time_now = datetime.now().strftime("%Y-%m-%dT%H:%M:%S+00:00")
+        next_week = datetime.now() + timedelta(days=7)
+        next_week = next_week.strftime("%Y-%m-%dT%H:%M:%S+00:00")
+        matches = self.match_collection.find({"date": {"$gte": time_now, "$lte": next_week}})
         next_matches = []
         for match in matches:
             next_matches.append(Match.from_mongo_doc(match))
@@ -473,3 +480,23 @@ class MongoFootballClient:
             matches_to_return.append(Match.from_mongo_doc(match))
 
         return matches_to_return
+    
+    def get_player_stats(self, player_id: int, team: int, date: str, test: bool=False) -> Optional[PlayerStats]:
+        if test:
+            col = self.test_player_stats_collection
+        else:
+            col = self.player_stats_collection
+
+        latest_player_stats = col.find({"player_id": player_id, "team": team, "date": {"$lt": date}}).sort("date", DESCENDING)
+
+        for stats in latest_player_stats:
+            return PlayerStats.from_mongo_doc(stats)
+        return None 
+        
+    def add_player_stats(self, player_stats: PlayerStats, test: bool=False):
+        if test:
+            col = self.test_player_stats_collection
+        else:
+            col = self.player_stats_collection
+
+        col.insert_one(player_stats.__dict__)

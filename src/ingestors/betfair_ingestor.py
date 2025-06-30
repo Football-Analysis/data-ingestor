@@ -122,7 +122,8 @@ class BetfairClient(Ingestor):
                             if not market_ids[mid]["started"]:
                                 if "rc" in market:
                                     for runner in market["rc"]:
-                                        market_ids[mid][runner["id"]]["odds"] = runner["ltp"]
+                                        if runner["ltp"] > market_ids[mid][runner["id"]]["odds"]:
+                                            market_ids[mid][runner["id"]]["odds"] = runner["ltp"]
                                 if "marketDefinition" in market:
                                     if market["marketDefinition"]["inPlay"]:
                                         market_ids[mid]["started"] = True
@@ -134,10 +135,18 @@ class BetfairClient(Ingestor):
                                                 if "draw" in runner:
                                                     draw_odds = runner["odds"]
                                                 elif runner["home"]:
-                                                    home_team = runner["name"]
+                                                    home_id = self.mfc.get_team_from_name(runner["name"], "betfair")
+                                                    if home_id is not None:
+                                                        home_team = home_id
+                                                    else:
+                                                        home_team = runner["name"]
                                                     home_odds = runner["odds"]
                                                 elif not runner["home"]:
-                                                    away_team = runner["name"]
+                                                    away_id = self.mfc.get_team_from_name(runner["name"], "betfair")
+                                                    if away_id is not None:
+                                                        away_team = away_id
+                                                    else:
+                                                        away_team = runner["name"]
                                                     away_odds = runner["odds"]
                                                 else:
                                                     raise RuntimeError("Couldn't find home away and draw odds")
