@@ -8,7 +8,8 @@ from ..data_models.standing import Standing
 from typing import List
 from tqdm import tqdm
 from ..data_models.team import Team
-from time import gmtime, strftime
+from datetime import datetime, timedelta
+from ..config import Config as conf
 
 
 class MongoFootballClient:
@@ -295,7 +296,8 @@ class MongoFootballClient:
         self.odds_collection.delete_one({"date": date, "home_team": home_team})
 
     def get_next_gameweek(self, league_id, season):
-        time_now = strftime("%Y-%m-%dT%H:%M:%S+00:00", gmtime())
+        now = datetime.now()
+        time_now = now.strftime("%Y-%m-%dT%H:%M:%S+00:00")
         next_match = self.match_collection.find({
             "league.id": league_id,
             "season": season,
@@ -318,8 +320,11 @@ class MongoFootballClient:
             leagues_matches.append(Match.from_mongo_doc(match))
         return leagues_matches
 
-    def get_next_matches(self, gameweek, season, league_id):
-        matches = self.match_collection.find({"game_week": gameweek, "season": season, "league.id": league_id})
+    def get_next_matches(self):
+        time_now = datetime.now().strftime("%Y-%m-%dT%H:%M:%S+00:00")
+        until_date = datetime.now() + timedelta(days=conf.DAY_LIMIT)
+        until_date = until_date.strftime("%Y-%m-%dT%H:%M:%S+00:00")
+        matches = self.match_collection.find({"date": {"$gte": time_now, "$lte": until_date}})
         next_matches = []
         for match in matches:
             next_matches.append(Match.from_mongo_doc(match))

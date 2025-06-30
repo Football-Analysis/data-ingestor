@@ -45,7 +45,7 @@ def update_matches_and_create_next_obs():
         season = af.get_current_season(league)
         gameweek = mfc.get_next_gameweek(league, season)
         if gameweek is not None:
-            next_matches_leagues = mfc.get_next_matches(gameweek, season, league)
+            next_matches_leagues = mfc.get_next_matches()
             next_matches.extend(next_matches_leagues)
     mfc.add_next_matches(next_matches)
 
