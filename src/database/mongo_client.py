@@ -10,6 +10,7 @@ from typing import List, Optional
 from tqdm import tqdm
 from ..data_models.team import Team
 from datetime import datetime, timedelta
+from ..config import Config as conf
 
 
 class MongoFootballClient:
@@ -324,9 +325,9 @@ class MongoFootballClient:
 
     def get_next_matches(self):
         time_now = datetime.now().strftime("%Y-%m-%dT%H:%M:%S+00:00")
-        next_week = datetime.now() + timedelta(days=7)
-        next_week = next_week.strftime("%Y-%m-%dT%H:%M:%S+00:00")
-        matches = self.match_collection.find({"date": {"$gte": time_now, "$lte": next_week}})
+        until_date = datetime.now() + timedelta(days=conf.DAY_LIMIT)
+        until_date = until_date.strftime("%Y-%m-%dT%H:%M:%S+00:00")
+        matches = self.match_collection.find({"date": {"$gte": time_now, "$lte": until_date}})
         next_matches = []
         for match in matches:
             next_matches.append(Match.from_mongo_doc(match))

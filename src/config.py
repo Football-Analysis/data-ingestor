@@ -14,3 +14,5 @@ class Config:
     MONGO_URL = f"mongodb://{MONGO_HOST}:27017/"
 
     BETFAIR_DATA_DIR = os.environ.get("BETFAIR_CERT_DIR", "/home/ubuntu/betfair-cert/")
+
+    DAY_LIMIT = 1
