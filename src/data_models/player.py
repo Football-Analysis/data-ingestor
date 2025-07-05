@@ -6,7 +6,6 @@ from typing import Any
 class Player:
     player_id: str
     team: int
-    minutes: int
     started: bool
 
     @staticmethod

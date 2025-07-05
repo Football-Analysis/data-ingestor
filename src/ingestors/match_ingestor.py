@@ -74,6 +74,21 @@ class ApiFootball(Ingestor):
                     leagues_to_get.append((league_id, season["year"]))
         return leagues_to_get
     
+    def get_lineup_leagues(self):
+        endpoint = f"{self.base_url}/leagues"
+        params = {"type": "league"}
+        leagues = get(endpoint, headers=self.base_headers, params=params)
+
+        self.check_api_limits(leagues.headers)
+        league_data = leagues.json()
+        leagues_to_get = []
+        for league in league_data["response"]:
+            league_id = league["league"]["id"]
+            for season in league["seasons"]:
+                if season["year"] > 2010 and season["coverage"]["fixtures"]["lineups"]:
+                    leagues_to_get.append((league_id, season["year"]))
+        return leagues_to_get
+    
     def get_all_leagues(self):
         endpoint = f"{self.base_url}/leagues"
         params = {"type": "league"}
@@ -285,4 +300,24 @@ class ApiFootball(Ingestor):
                 else:
                     started = False
                 player_processed_stats.append(Player(player_id=player_id, team=team, minutes=minutes, started=started))
+        return player_processed_stats
+    
+    def get_lineups(self, fixture_id: int) -> List[Player]:
+        endpoint = f"{self.base_url}/fixtures/lineups"
+        params = {"fixture": fixture_id}
+        player_stats = get(endpoint, headers=self.base_headers, params=params)
+        self.check_api_limits(player_stats.headers)
+        try:
+            if len(player_stats.json()["response"]) == 0:
+                return False
+        except:
+            return False
+        
+        player_processed_stats = []
+        for team in player_stats.json()["response"]:
+            players = team["startXI"]
+            team = team["team"]["id"]
+            for player in players:
+                player_id = player["player"]["id"]
+                player_processed_stats.append(Player(player_id=player_id, team=team, started=True))
         return player_processed_stats
