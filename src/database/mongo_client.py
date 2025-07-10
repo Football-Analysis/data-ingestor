@@ -5,6 +5,7 @@ from ..data_models.match import Match
 from ..data_models.observation import Observation
 from ..data_models.odds import Odds
 from ..data_models.standing import Standing
+from ..data_models.bet import Bet
 from typing import List
 from tqdm import tqdm
 from ..data_models.team import Team
@@ -29,6 +30,7 @@ class MongoFootballClient:
         self.next_observations_collection = self.football["next_observations"]
         self.standing_collection = self.football["standings"]
         self.test_standing_collection = self.football["test_standings"]
+        self.bet_collection = self.football["bets"]
 
     def add_league(self, league: League):
         """Saves a list of teams that belonged to a certain league into mongo
@@ -478,3 +480,22 @@ class MongoFootballClient:
             matches_to_return.append(Match.from_mongo_doc(match))
 
         return matches_to_return
+    
+    def get_bets_no_result(self) -> List[Bet]:
+        bets = self.bet_collection.find({"result": {"$exists": False}})
+
+        bets_to_check = []
+        for bet in bets:
+            bets_to_check.append(Bet.from_mongo_doc(bet))
+
+        return bets_to_check
+    
+    def get_fixture_id(self, date, home_team):
+        match = self.match_collection.find_one({"date": date, "home_team": home_team})
+
+        return match["fixture_id"]
+
+    def update_bet(self, bet: Bet):
+        query = {"date": bet.date, "home_team": bet.home_team}
+        update_values = {"$set": bet.__dict__}
+        self.bet_collection.update_one(query, update_values)

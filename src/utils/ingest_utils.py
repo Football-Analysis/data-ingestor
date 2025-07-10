@@ -62,3 +62,29 @@ def update_matches_and_create_next_obs():
     mfc.add_observations(observations, True)
 
     print("Ingest of latest data completed, new observations succesfully created")
+
+def update_bets():
+    mfc = MongoFootballClient(conf.MONGO_URL)
+    af = ApiFootball(conf.FOOTBALL_API_URL, conf.FOOTBALL_API_KEY)
+
+    bets_to_check = mfc.get_bets_no_result()
+    print(f"{len(bets_to_check)} amount of unsettled bets to check")
+
+    for bet in bets_to_check:
+        fixture_id = mfc.get_fixture_id(bet.date, bet.home_team)
+        match = af.get_game_from_id(fixture_id)
+        if match.result != "N/A":
+            if bet.back and bet.home_team == bet.bet_on and match.result == "Home Win":
+                result = "won"
+            elif bet.back and bet.home_team != bet.bet_on and match.result == "Away Win":
+                result = "won"
+            elif not bet.back and bet.home_team == bet.bet_on and match.result != "Home Win":
+                result = "won"
+            elif not bet.back and bet.home_team != bet.bet_on and match.result != "Away Win":
+                result = "won"
+            else:
+                result = "lost"
+
+            bet.result = result
+            print(f"updating bet for game with date {bet.date} and home team {bet.home_team}")
+            mfc.update_bet(bet)

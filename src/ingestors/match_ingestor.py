@@ -242,3 +242,15 @@ class ApiFootball(Ingestor):
                 result = "Draw"
             returned_h2h.append(H2H(result, home_team, home_goals, away_team, away_goals))
         return returned_h2h
+    
+    def get_game_from_id(self, fixture_id) -> Match:
+        endpoint = f"{self.base_url}/fixtures"
+        params = {"id": fixture_id}
+        fixtures = get(endpoint, headers=self.base_headers, params=params)
+        self.check_api_limits(fixtures.headers)
+        success, processed_match = process_raw_match(fixtures.json()["response"][0])
+        if success:
+            processed_match = processed_match
+        else:
+            return None
+        return processed_match
