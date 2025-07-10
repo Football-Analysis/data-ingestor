@@ -242,7 +242,7 @@ class ApiFootball(Ingestor):
                 result = "Draw"
             returned_h2h.append(H2H(result, home_team, home_goals, away_team, away_goals))
         return returned_h2h
-    
+
     def get_game_from_id(self, fixture_id) -> Match:
         endpoint = f"{self.base_url}/fixtures"
         params = {"id": fixture_id}

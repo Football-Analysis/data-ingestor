@@ -63,6 +63,7 @@ def update_matches_and_create_next_obs():
 
     print("Ingest of latest data completed, new observations succesfully created")
 
+
 def update_bets():
     mfc = MongoFootballClient(conf.MONGO_URL)
     af = ApiFootball(conf.FOOTBALL_API_URL, conf.FOOTBALL_API_KEY)
