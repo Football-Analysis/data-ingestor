@@ -1,5 +1,5 @@
 from src.utils.feature_engineering import create_standings, update_table, create_obs_from_match, update_obs, calc_h2h
-from src.database.mongo_client import MongoFootballClient
+from src.database.mongo_football_client import MongoFootballClient
 from src.config import Config as conf
 from src.ingestors.betfair_ingestor import BetfairClient
 from src.ingestors.match_ingestor import ApiFootball
@@ -19,4 +19,4 @@ observations = []
 for match in tqdm(matches):
     obs = create_obs_from_match(match)
     if obs is not None:
-        mfc.add_observation(obs)
+        mfc.observations.add_observation(obs)

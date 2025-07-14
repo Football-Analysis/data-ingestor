@@ -1,5 +1,5 @@
 from src.ingestors.match_ingestor import ApiFootball
-from src.database.mongo_client import MongoFootballClient
+from src.database.mongo_football_client import MongoFootballClient
 from src.data_models.league import League
 from src.config import Config as conf
 from src.utils.feature_engineering import engineer_all_features, create_training_data
