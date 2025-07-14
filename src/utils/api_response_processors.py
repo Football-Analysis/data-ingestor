@@ -2,7 +2,13 @@ from ..data_models.match import Match
 
 
 def process_raw_match(match):
-    game_week = match["league"]["round"].split()[-1]
+
+    try:
+        game_week = match["league"]["round"].split()[-1]
+    except AttributeError:
+        print(f"Cannot create a match for game with date {match["fixture"]["date"]} \
+              and home team {match["teams"]["home"]["id"]}")
+        return False, None
     try:
         int(game_week)
         game_week = int(game_week)

@@ -1,7 +1,7 @@
 from src.ingestors.match_ingestor import ApiFootball
 from src.config import Config as conf
 from tqdm import tqdm
-from src.database.mongo_client import MongoFootballClient
+from src.database.mongo_football_client import MongoFootballClient
 from src.utils.feature_engineering import create_standings, create_obs_from_match
 from src.ingestors.betfair_ingestor import BetfairClient
 from src.data_models.player_stats import PlayerStats
@@ -47,10 +47,24 @@ for league in tqdm(stats_league):
 
 matches = mfc.get_finished_matches(True)
 
-for match in tqdm(matches):
-    obs = create_obs_from_match(match)
-    if obs is not None:
-        mfc.add_observation(obs, True)
+# no_player_leagues = af.get_all_leagues()
+# player_leagues = af.get_player_stats_leagues()
+# injury_leagues = af.get_injury_leagues()
+# everything_leagues = af.get_max_leagues()
+# lineup_leagues = af.get_all_leagues_lineups()
+# print(len(no_player_leagues))
+# print(len(player_leagues))
+# print(len(injury_leagues))
+# print(len(everything_leagues))
+# print(len(lineup_leagues))
+
+
+# matches = mfc.get_finished_matches(True)
+
+# for match in tqdm(matches):
+#     obs = create_obs_from_match(match)
+#     if obs is not None:
+#         mfc.add_observation(obs, True)
 
 
 

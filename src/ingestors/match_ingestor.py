@@ -321,3 +321,15 @@ class ApiFootball(Ingestor):
                 player_id = player["player"]["id"]
                 player_processed_stats.append(Player(player_id=player_id, team=team, started=True))
         return player_processed_stats
+
+    def get_game_from_id(self, fixture_id) -> Match:
+        endpoint = f"{self.base_url}/fixtures"
+        params = {"id": fixture_id}
+        fixtures = get(endpoint, headers=self.base_headers, params=params)
+        self.check_api_limits(fixtures.headers)
+        success, processed_match = process_raw_match(fixtures.json()["response"][0])
+        if success:
+            processed_match = processed_match
+        else:
+            return None
+        return processed_match
