@@ -1,5 +1,5 @@
 from ..data_models.match import Match
-from ..database.mongo_client import MongoFootballClient
+from ..database.mongo_football_client import MongoFootballClient
 from ..config import Config as conf
 from ..data_models.observation import Observation
 from ..data_models.standing import Standing
@@ -12,7 +12,7 @@ import jaro
 
 def engineer_all_features():
     mfc = MongoFootballClient(conf.MONGO_URL)
-    matches = mfc.get_matches()
+    matches = mfc.matches.get_matches()
     print("Calculating league.type values")
     processed_matches = list(map(league_type, matches))
     return processed_matches
@@ -44,14 +44,14 @@ def calculate_form(form):
 
 def create_training_data(update=True):
     mfc = MongoFootballClient(conf.MONGO_URL)
-    matches = mfc.get_finished_matches()
+    matches = mfc.matches.get_finished_matches()
     for match in tqdm(matches):
         observation = create_obs_from_match(match)
         if observation is not None:
             if update:
-                mfc.update_observation(observation)
+                mfc.observations.update_observation(observation)
             else:
-                mfc.add_observation(observation)
+                mfc.observations.add_observation(observation)
 
 
 def process_raw_h2h(matches: List[Match]) -> List[H2H]:
@@ -73,7 +73,7 @@ def process_raw_h2h(matches: List[Match]) -> List[H2H]:
 
 def calc_h2h(home_team, away_team, league_id, season, date):
     mfc = MongoFootballClient(conf.MONGO_URL)
-    h2h_matches = mfc.get_h2h(home_team, away_team, league_id, season, date)
+    h2h_matches = mfc.matches.get_h2h(home_team, away_team, league_id, season, date)
     try:
         h2h_stats = process_raw_h2h(h2h_matches)
     except Exception as e:
@@ -127,7 +127,7 @@ def create_obs_from_match(match: Match) -> Observation:
         return None
 
     try:
-        standing: Standing = mfc.get_standings_from_team_date(match.league["id"], match.season, match.home_team, match.date)
+        standing: Standing = mfc.standings.get_standings_from_team_date(match.league["id"], match.season, match.date)
         home_ppg = standing.standings[str(match.home_team)]["ppg"]
         home_plfg = standing.standings[str(match.home_team)]["plfg"]
         away_ppg = standing.standings[str(match.away_team)]["ppg"]
@@ -246,9 +246,9 @@ def calculate_general_form(matches: List[Match], team: int):
 def create_local_form(match: Match):
     mfc = MongoFootballClient(conf.MONGO_URL)
 
-    home_home_matches = mfc.get_last_5_games(match.league["id"], match.season, match.home_team, match.date, False, True)
+    home_home_matches = mfc.matches.get_last_5_games(match.league["id"], match.season, match.home_team, match.date, False, True)
     home_home_form = calculate_local_form(home_home_matches)
-    away_away_matches = mfc.get_last_5_games(match.league["id"], match.season, match.away_team, match.date, False, False)
+    away_away_matches = mfc.matches.get_last_5_games(match.league["id"], match.season, match.away_team, match.date, False, False)
     away_away_form = calculate_local_form(away_away_matches, False)
 
     home_wins = home_home_form.count("W")
@@ -287,8 +287,8 @@ def calculate_local_form(matches: List[Match], home: bool = True) -> List[str]:
 
 def map_ids():
     mfc = MongoFootballClient(conf.MONGO_URL)
-    af_teams = mfc.get_all_teams()
-    betfair_teams = mfc.get_betfair_team_names()
+    af_teams = mfc.teams.get_all_teams()
+    betfair_teams = mfc.odds.get_betfair_team_names()
     complete_matches = 0
     for betfair_team in tqdm(betfair_teams):
         if isinstance(betfair_team, str):
@@ -309,81 +309,81 @@ def map_ids():
                 team = Team(id=closest_match.id,
                             name=betfair_team,
                             source="betfair")
-                mfc.add_team(team)
+                mfc.teams.add_team(team)
     print(complete_matches / len(betfair_teams))
 
 
 def map_odd_ids():
     mfc = MongoFootballClient(conf.MONGO_URL)
-    odds = mfc.get_odds(True)
+    odds = mfc.odds.get_odds(True)
     for odd in tqdm(odds):
         changed = False
         original_home_team = odd.home_team
         if isinstance(original_home_team, str):
-            home_team = mfc.get_team_from_name(odd.home_team)
+            home_team = mfc.teams.get_team_from_name(odd.home_team)
             if home_team is not None:
                 odd.home_team = home_team
                 changed = True
 
         original_away_team = odd.away_team
         if isinstance(original_away_team, str):
-            away_team = mfc.get_team_from_name(odd.away_team)
+            away_team = mfc.teams.get_team_from_name(odd.away_team)
             if away_team is not None:
                 odd.away_team = away_team
                 changed = True
 
         if isinstance(odd.away_team, str) ^ isinstance(odd.home_team, str):
             if isinstance(odd.home_team, str):
-                match = mfc.get_match(odd.date, away_team=odd.away_team)
+                match = mfc.matches.get_match(odd.date, away_team=odd.away_team)
                 if match is not None:
                     home_team = match.home_team
                     odd.home_team = home_team
-                    mfc.add_team(Team(home_team, original_home_team, "betfair"))
+                    mfc.teams.add_team(Team(home_team, original_home_team, "betfair"))
                     changed = True
                 else:
                     print("Deleting Cup game")
-                    mfc.del_odd(odd.date, original_home_team)
+                    mfc.odds.del_odd(odd.date, original_home_team)
 
             elif isinstance(odd.away_team, str):
-                match = mfc.get_match(odd.date, home_team=odd.home_team)
+                match = mfc.matches.get_match(odd.date, home_team=odd.home_team)
                 if match is not None:
                     away_team = match.away_team
                     odd.away_team = away_team
-                    mfc.add_team(Team(away_team, original_away_team, "betfair"))
+                    mfc.teams.add_team(Team(away_team, original_away_team, "betfair"))
                     changed = True
                 else:
                     print(f"Deleting Cup game, {odd.date} with home team {odd.home_team}")
-                    mfc.del_odd(odd.date, original_home_team)
+                    mfc.odds.del_odd(odd.date, original_home_team)
 
         if changed:
             print("Updating odds")
-            mfc.update_odd(odd, original_home_team)
+            mfc.odds.update_odd(odd, original_home_team)
 
 
 def create_standings(league_id, season, test=False):
-    mfc = MongoFootballClient(conf.MONGO_URL)
+    mfc = MongoFootballClient(conf.MONGO_URL, test)
 
-    seasons_matches = mfc.get_leagues_matches(league_id, season, test)
+    seasons_matches = mfc.matches.get_leagues_matches(league_id, season)
 
-    if not mfc.standing_exists(league_id, season, test):
+    if not mfc.standings.standing_exists(league_id, season):
         print(f"Creating standings for league {league_id}, season {season}, test collection - {test}")
         initialise_table(league_id, season, test)
 
-    update_batches = []
+    update_batches: List[List[Match]] = []
     date = ""
-    match_batch = []
-    for match in seasons_matches:
+    match_batch: List[Match] = []
+    for ind_match in seasons_matches:
         if len(update_batches) == 0 and len(match_batch) == 0:
-            date = match.date
-            match_batch.append(match)
+            date = ind_match.date
+            match_batch.append(ind_match)
         else:
-            match_date = match.date
+            match_date = ind_match.date
             if match_date == date:
-                match_batch.append(match)
+                match_batch.append(ind_match)
             else:
                 date = match_date
                 update_batches.append(match_batch)
-                match_batch = [match]
+                match_batch = [ind_match]
     if len(match_batch) > 0:
         update_batches.append(match_batch)
 
@@ -394,25 +394,23 @@ def create_standings(league_id, season, test=False):
 
 
 def update_table(match_batch: List[Match], last_date, test=False):
-    mfc = MongoFootballClient(conf.MONGO_URL)
-    standing = mfc.get_standings(last_date, match_batch[0].league["id"], match_batch[0].season, test)
+    mfc = MongoFootballClient(conf.MONGO_URL, test)
+    standing = mfc.standings.get_standings(last_date, match_batch[0].league["id"], match_batch[0].season)
 
-    standing_exists = mfc.get_standings(match_batch[0].date, match_batch[0].league["id"], match_batch[0].season, test)
+    standing_exists = mfc.standings.get_standings(match_batch[0].date, match_batch[0].league["id"], match_batch[0].season)
     if standing_exists is None:
         try:
             for match in match_batch:
-                home_last_games = mfc.get_last_5_games(match.league["id"],
+                home_last_games = mfc.matches.get_last_5_games(match.league["id"],
                                                        match.season,
                                                        match.home_team,
                                                        match.date,
-                                                       True,
-                                                       test)
-                away_last_games = mfc.get_last_5_games(match.league["id"],
+                                                       True)
+                away_last_games = mfc.matches.get_last_5_games(match.league["id"],
                                                        match.season,
                                                        match.away_team,
                                                        match.date,
-                                                       True,
-                                                       test)
+                                                       True)
                 home_general_form, away_general_form = create_general_form(match, home_last_games, away_last_games)
                 home_form_ppg = calulate_last_five_ppg(home_general_form)
                 away_form_ppg = calulate_last_five_ppg(away_general_form)
@@ -481,7 +479,7 @@ def update_table(match_batch: List[Match], last_date, test=False):
                 else:
                     away_ppd = away_form_ppg * away_general_difficulty
 
-                standings_history = mfc.get_last_stansings(match.league["id"], match.season, match.date, test)
+                standings_history = mfc.standings.get_last_standings(match.league["id"], match.season, match.date)
                 home_trend, home_form_diffs = get_ppd_rolling_window(standings_history, match.home_team)
                 away_trend, away_form_diffs = get_ppd_rolling_window(standings_history, match.away_team)
 
@@ -499,7 +497,7 @@ def update_table(match_batch: List[Match], last_date, test=False):
                 standing.standings[str(match.away_team)]["trend"] = away_trend
                 standing.standings[str(match.away_team)]["form_trend_diffs"] = away_form_diffs
 
-            mfc.add_standing(standing, test)
+            mfc.standings.add_standing(standing)
         except Exception as e:
             print(f"Cannot ingest league {match.league["id"]}, season {match.season}")
             print(e)
@@ -537,9 +535,9 @@ def get_ppd_rolling_window(standings: List[Standing], team):
 
 
 def initialise_table(league_id, season, test):
-    mfc = MongoFootballClient(conf.MONGO_URL)
+    mfc = MongoFootballClient(conf.MONGO_URL, test)
 
-    league = mfc.get_league(league_id, season)
+    league = mfc.leagues.get_league(league_id, season)
     try:
         teams_in_league = league.teams
     except:
@@ -564,10 +562,10 @@ def initialise_table(league_id, season, test):
     for team in teams_in_league:
         standings[str(team)] = initial_standings
 
-    mfc.add_standing(Standing(league_id=league_id,
+    mfc.standings.add_standing(Standing(league_id=league_id,
                               season=season,
                               date="1970-01-01T00:00:00+00:00",
-                              standings=standings), test)
+                              standings=standings))
 
 
 def update_obs(obs: Observation):
@@ -576,4 +574,4 @@ def update_obs(obs: Observation):
     obs.home_plfg = obs.home_plfg / 5
     obs.away_plfg = obs.away_plfg / 5
 
-    mfc.update_observation(obs)
+    mfc.observations.update_observation(obs)

@@ -1,13 +1,18 @@
 from src.ingestors.match_ingestor import ApiFootball
 from src.config import Config as conf
 from tqdm import tqdm
-from src.database.mongo_client import MongoFootballClient
+from src.database.mongo_football_client import MongoFootballClient
 from src.utils.feature_engineering import create_standings, create_obs_from_match
 from src.utils.ingest_utils import update_bets
+from src.database.match_collection import MatchCollection
+from pymongo import MongoClient
 
-update_bets()
+#update_bets()
+mfc = MongoFootballClient(conf.MONGO_URL)
 
+#mfc.observations.check_observation("2011-08-05T18:00:00+00:00-1299")
 
+mfc.standings.standing_exists(39, 2024, "2021-05-20T19:00:00+00:00")
 
 
 # af = ApiFootball(base_url=conf.FOOTBALL_API_URL, api_key=conf.FOOTBALL_API_KEY)

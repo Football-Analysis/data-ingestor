@@ -5,7 +5,7 @@ import bz2
 import json
 from datetime import datetime, timedelta
 from ..data_models.odds import Odds
-from ..database.mongo_client import MongoFootballClient
+from ..database.mongo_football_client import MongoFootballClient
 from ..config import Config as conf
 from jaro import jaro_winkler_metric
 from time import sleep
@@ -147,7 +147,7 @@ class BetfairClient(Ingestor):
                                                             home_odds=home_odds,
                                                             away_odds=away_odds,
                                                             draw_odds=draw_odds)
-                                        self.mfc.add_odd(odd_to_save)
+                                        self.mfc.odds.add_odd(odd_to_save)
                                         processed_mids.append(mid)
                                         del market_ids[mid]
                                         saved_odds += 1
