@@ -21,14 +21,14 @@ class OddsCollection(MongoCollection):
         if result is not None:
             return True
         return False
-    
+
     def add_odd(self, odd: Odds):
         """Adds an odd to the database
 
         Args:
             odd (Odds): The odds to add
         """
-        #TODO: Checkif the odd already exists
+        # TODO: Checkif the odd already exists
         self.col.insert_one(odd.__dict__)
 
     def update_odd(self, odd: Odds, home_team=None):
@@ -55,7 +55,7 @@ class OddsCollection(MongoCollection):
         home_teams = self.col.distinct("home_team")
         away_team = self.col.distinct("away_team")
         return list(set(home_teams).union(away_team))
-    
+
     def get_odds(self, processed=False) -> List[Odds]:
         """Gets the list of odds that exist
 
@@ -64,7 +64,7 @@ class OddsCollection(MongoCollection):
             been successfuly mapped to an ID. Defaults to False.
 
         Returns:
-            List[Odds]: A list of returned odds 
+            List[Odds]: A list of returned odds
         """
         if processed:
             mongo_filter = {"$or": [
@@ -77,7 +77,7 @@ class OddsCollection(MongoCollection):
         for odd in odds:
             odds_to_return.append(Odds.from_mongo_doc(odd))
         return odds_to_return
-    
+
     def del_odd(self, date: str, home_team: int):
         """Deletes an odd
 

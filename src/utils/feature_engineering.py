@@ -246,9 +246,19 @@ def calculate_general_form(matches: List[Match], team: int):
 def create_local_form(match: Match):
     mfc = MongoFootballClient(conf.MONGO_URL)
 
-    home_home_matches = mfc.matches.get_last_5_games(match.league["id"], match.season, match.home_team, match.date, False, True)
+    home_home_matches = mfc.matches.get_last_5_games(match.league["id"],
+                                                     match.season,
+                                                     match.home_team,
+                                                     match.date,
+                                                     False,
+                                                     True)
     home_home_form = calculate_local_form(home_home_matches)
-    away_away_matches = mfc.matches.get_last_5_games(match.league["id"], match.season, match.away_team, match.date, False, False)
+    away_away_matches = mfc.matches.get_last_5_games(match.league["id"],
+                                                     match.season,
+                                                     match.away_team,
+                                                     match.date,
+                                                     False,
+                                                     False)
     away_away_form = calculate_local_form(away_away_matches, False)
 
     home_wins = home_home_form.count("W")
@@ -402,15 +412,15 @@ def update_table(match_batch: List[Match], last_date, test=False):
         try:
             for match in match_batch:
                 home_last_games = mfc.matches.get_last_5_games(match.league["id"],
-                                                       match.season,
-                                                       match.home_team,
-                                                       match.date,
-                                                       True)
+                                                               match.season,
+                                                               match.home_team,
+                                                               match.date,
+                                                               True)
                 away_last_games = mfc.matches.get_last_5_games(match.league["id"],
-                                                       match.season,
-                                                       match.away_team,
-                                                       match.date,
-                                                       True)
+                                                               match.season,
+                                                               match.away_team,
+                                                               match.date,
+                                                               True)
                 home_general_form, away_general_form = create_general_form(match, home_last_games, away_last_games)
                 home_form_ppg = calulate_last_five_ppg(home_general_form)
                 away_form_ppg = calulate_last_five_ppg(away_general_form)
@@ -563,9 +573,9 @@ def initialise_table(league_id, season, test):
         standings[str(team)] = initial_standings
 
     mfc.standings.add_standing(Standing(league_id=league_id,
-                              season=season,
-                              date="1970-01-01T00:00:00+00:00",
-                              standings=standings))
+                                        season=season,
+                                        date="1970-01-01T00:00:00+00:00",
+                                        standings=standings))
 
 
 def update_obs(obs: Observation):

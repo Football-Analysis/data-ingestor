@@ -8,7 +8,7 @@ class BetCollection(MongoCollection):
         """Returns a list of bets that have been placed that have no result for
 
         Returns:
-            List[Bet]: List of no result bets 
+            List[Bet]: List of no result bets
         """
         bets = self.col.find({"result": {"$exists": False}})
 
@@ -17,7 +17,7 @@ class BetCollection(MongoCollection):
             bets_to_check.append(Bet.from_mongo_doc(bet))
 
         return bets_to_check
-    
+
     def update_bet(self, bet: Bet):
         """Update a bet in the databse
 

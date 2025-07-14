@@ -19,7 +19,7 @@ class ObservationCollection(MongoCollection):
             return True
         except:
             return False
-        
+
     def update_observation(self, observation: Observation):
         """Udates an existing observation in mongo
 

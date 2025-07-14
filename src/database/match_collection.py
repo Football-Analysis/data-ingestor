@@ -48,7 +48,7 @@ class MatchCollection(MongoCollection):
         for match in cursor:
             matches.append(Match.from_mongo_doc(match))
         return matches
-    
+
     def get_finished_matches(self) -> List[Match]:
         """Gets all finished matches within the database
 
@@ -63,7 +63,7 @@ class MatchCollection(MongoCollection):
         for match in cursor:
             matches.append(Match.from_mongo_doc(match))
         return matches
-    
+
     def get_last_5_games(self, league: int, season: int, team: int, date: str,
                          all=False, home: bool = True) -> List[Match]:
         """Given a date, get the last 5 games for a specific team prior to that date
@@ -103,8 +103,8 @@ class MatchCollection(MongoCollection):
         if len(matches_to_return) < 5:
             return matches_to_return
         return matches_to_return[:5]
-    
-    def get_match(self, date: str, home_team: Optional[int]=None, away_team: Optional[int]=None) -> Optional[Match]:
+
+    def get_match(self, date: str, home_team: Optional[int] = None, away_team: Optional[int] = None) -> Optional[Match]:
         """Given some match information, find the matching match in the databse,
            return None if no match exists
 
@@ -130,7 +130,7 @@ class MatchCollection(MongoCollection):
         if match is None:
             return None
         return Match.from_mongo_doc(match)
-    
+
     def match_exists(self, league_id: int, season: int, home_team: int, away_team: int) -> bool:
         """Chec kto see if a given match exists in the database
 
@@ -154,7 +154,7 @@ class MatchCollection(MongoCollection):
             return False
         else:
             return True
-        
+
     def get_leagues_matches(self, league_id: int, season: int) -> List[Match]:
         """Returns a list of matches given a league ID and a season
 
@@ -170,7 +170,7 @@ class MatchCollection(MongoCollection):
         for ind_match in matches:
             leagues_matches.append(Match.from_mongo_doc(ind_match))
         return leagues_matches
-    
+
     def get_next_matches(self) -> List[Match]:
         """Gets the incoming matches in the next x amount of days (defined in the config.py file)
 
@@ -186,7 +186,7 @@ class MatchCollection(MongoCollection):
             next_matches.append(Match.from_mongo_doc(match))
         self.add_next_matches(next_matches)
         return next_matches
-    
+
     def add_next_matches(self, matches: List[Match]):
         """Adds the upcoming matches to the next matches collection
 
@@ -212,7 +212,7 @@ class MatchCollection(MongoCollection):
         Args:
             home_team (int): home team to check against
             away_team (int): away eam to check agaisnt
-            league_id (int): What league you want the head to head matches from 
+            league_id (int): What league you want the head to head matches from
             season (int): Which season to star te head to head search from
             date (str): The date of the match
 
@@ -232,7 +232,7 @@ class MatchCollection(MongoCollection):
             matches_to_return.append(Match.from_mongo_doc(match))
 
         return matches_to_return
-    
+
     def get_fixture_id(self, date: str, home_team: int) -> int:
         """Return te fixture ID of a match given the date and home team
 

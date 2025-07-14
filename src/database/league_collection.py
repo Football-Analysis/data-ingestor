@@ -40,7 +40,7 @@ class LeagueCollection(MongoCollection):
         if league is None:
             return False
         return League.from_mongo_doc(league)
-    
+
     def get_all_leagues(self) -> List[League]:
         """Returns all leagues that are held wthin the database
 
@@ -54,7 +54,7 @@ class LeagueCollection(MongoCollection):
             leagues_to_return.append(League.from_mongo_doc(league))
 
         return leagues_to_return
-    
+
     def get_list_of_leagues(self) -> List[int]:
         """GEt the full list of league IDs in the database
 

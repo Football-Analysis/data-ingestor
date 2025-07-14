@@ -1,16 +1,4 @@
-from pymongo import MongoClient, DESCENDING, ASCENDING
-from pymongo.errors import DuplicateKeyError
-from ..data_models.league import League
-from ..data_models.match import Match
-from ..data_models.observation import Observation
-from ..data_models.odds import Odds
-from ..data_models.standing import Standing
-from ..data_models.bet import Bet
-from typing import List
-from tqdm import tqdm
-from ..data_models.team import Team
-from datetime import datetime, timedelta
-from ..config import Config as conf
+from pymongo import MongoClient
 from .match_collection import MatchCollection
 from .league_collection import LeagueCollection
 from .observation_collection import ObservationCollection

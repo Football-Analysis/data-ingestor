@@ -15,7 +15,7 @@ class TeamCollection(MongoCollection):
         for team in cursor:
             all_teams.append(Team.from_mongo_doc(team))
         return list(all_teams)
-    
+
     def add_team(self, team: Team):
         "Adds a team to the database"
         self.col.insert_one(team.__dict__)
@@ -39,4 +39,3 @@ class TeamCollection(MongoCollection):
         else:
             team = Team.from_mongo_doc(team)
             return team.id
-    

@@ -66,8 +66,8 @@ class StandingCollection(MongoCollection):
         """Gets a specific standing from the database, returns None if no match
 
         Args:
-            date (str): Tehd ate to match on 
-            league_id (int): The league id to match on 
+            date (str): Tehd ate to match on
+            league_id (int): The league id to match on
             season (int): The season to match on
 
         Returns:
@@ -78,7 +78,7 @@ class StandingCollection(MongoCollection):
             return None
         else:
             return Standing.from_mongo_doc(standing)
-        
+
     def get_standings_from_team_date(self, league_id: int, season: int, date: str) -> Standing:
         """Get the standing from a specific point in time
 
