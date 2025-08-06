@@ -43,7 +43,7 @@ class MatchCollection(MongoCollection):
             List[Match]: A list of all returned matches
         """
         print("Querying all matches")
-        cursor = self.col.find({})
+        cursor = self.col.find({}).sort("date", ASCENDING)
         matches = []
         for match in cursor:
             matches.append(Match.from_mongo_doc(match))
@@ -56,9 +56,7 @@ class MatchCollection(MongoCollection):
             List[Match]: _description_
         """
         print("Querying all finished matches")
-        cursor = self.col.find({
-            "result": {"$ne": "N/A"}
-        })
+        cursor = self.col.find({"result": {"$ne": "N/A"}}).sort
         matches = []
         for match in cursor:
             matches.append(Match.from_mongo_doc(match))

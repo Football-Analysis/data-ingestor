@@ -7,6 +7,9 @@ from tqdm import tqdm
 from typing import List
 from ..data_models.h2h import H2H
 from ..data_models.team import Team
+from ..data_models.player import Player
+from ..data_models.player_stats import PlayerStats
+from ..ingestors.match_ingestor import ApiFootball
 import jaro
 
 
@@ -119,8 +122,56 @@ def calc_h2h(home_team, away_team, league_id, season, date):
     return h2h_diff, home_gd, len(h2h_stats)
 
 
-def create_obs_from_match(match: Match) -> Observation:
-    mfc = MongoFootballClient(conf.MONGO_URL)
+def process_lineup(match: Match, lineup: List[int], team: int, test: bool):
+    mfc = MongoFootballClient(conf.MONGO_URL, test)
+    diffs = []
+    PPRIOR_WEIGHT = 10
+    try:
+        for player in lineup:
+            latest_stats = mfc.player_stats.get_player_stats(player, team, match.season, match.date)
+            if latest_stats is None:
+                latest_stats = PlayerStats(player, team, match.season, "N/A", 0, 0, 0, 0)
+            last_seasons_stats = mfc.player_stats.get_player_stats(player, team, match.season-1, match.date)
+            if last_seasons_stats is None:
+                last_seasons_stats = PlayerStats(player, team, match.season-1, "N/A", 0, 0, 0, 0)
+            two_ago_seasons_stats = mfc.player_stats.get_player_stats(player, team, match.season-2, match.date)
+            if two_ago_seasons_stats is None:
+                two_ago_seasons_stats = PlayerStats(player, team, match.season-2, "N/A", 0, 0, 0, 0)
+            if latest_stats.played + last_seasons_stats.played + two_ago_seasons_stats.played == 0:
+                agrregated_played_ppg = 1
+                aggregated_played = 1
+            else:
+                agrregated_played_ppg = (latest_stats.played * latest_stats.played_ppg + last_seasons_stats.played * last_seasons_stats.played_ppg + two_ago_seasons_stats.played * two_ago_seasons_stats.played_ppg) / (latest_stats.played + last_seasons_stats.played + two_ago_seasons_stats.played)
+                aggregated_played = latest_stats.played + last_seasons_stats.played + two_ago_seasons_stats.played
+            if latest_stats.not_played + last_seasons_stats.not_played + two_ago_seasons_stats.not_played == 0:
+                agrregated_not_played_ppg = 1
+                aggregated_not_played = 1
+            else:
+                agrregated_not_played_ppg = (latest_stats.not_played * latest_stats.not_played_ppg + last_seasons_stats.not_played * last_seasons_stats.not_played_ppg + two_ago_seasons_stats.not_played * two_ago_seasons_stats.not_played_ppg) / (latest_stats.not_played + last_seasons_stats.not_played + two_ago_seasons_stats.not_played)
+                aggregated_not_played = latest_stats.not_played + last_seasons_stats.not_played + two_ago_seasons_stats.not_played
+            aggregated_general_ppg = ((agrregated_played_ppg * aggregated_played) + (agrregated_not_played_ppg * aggregated_not_played))/2
+            regularized_diff = (agrregated_played_ppg * aggregated_played + aggregated_general_ppg * PPRIOR_WEIGHT) / (aggregated_played + PPRIOR_WEIGHT) - \
+            (agrregated_not_played_ppg * aggregated_not_played + aggregated_general_ppg * PPRIOR_WEIGHT) / (aggregated_not_played + PPRIOR_WEIGHT)
+            diffs.append(regularized_diff)
+    except Exception as e:
+        print(e)
+        print("BAD SQUAD")
+    return sum(diffs)/len(diffs)
+
+def create_squad_strength(match: Match, test: bool):
+    mfc = MongoFootballClient(conf.MONGO_URL, test)
+    lineup = mfc.lineups.get_lineups(match.fixture_id)
+    if lineup is None:
+        #print(f"No lineup found for {match.fixture_id}")
+        return 0.0, 0.0
+    #print(f"Found lineup for fixture {match.fixture_id}")
+    home_strength = process_lineup(match, lineup.home_lineup, lineup.home_team, test)
+    away_strength = process_lineup(match, lineup.away_lineup, lineup.away_team, test)
+    return home_strength, away_strength
+
+
+def create_obs_from_match(match: Match, test=False) -> Observation:
+    mfc = MongoFootballClient(conf.MONGO_URL, test)
     match_id = f"{match.date}-{match.home_team}"
 
     if match.game_week == 1:
@@ -129,8 +180,10 @@ def create_obs_from_match(match: Match) -> Observation:
     try:
         standing: Standing = mfc.standings.get_standings_from_team_date(match.league["id"], match.season, match.date)
         home_ppg = standing.standings[str(match.home_team)]["ppg"]
+        home_home_ppg = standing.standings[str(match.home_team)]["home_ppg"]
         home_plfg = standing.standings[str(match.home_team)]["plfg"]
         away_ppg = standing.standings[str(match.away_team)]["ppg"]
+        away_away_ppg = standing.standings[str(match.away_team)]["away_ppg"]
         away_plfg = standing.standings[str(match.away_team)]["plfg"]
         home_general_difficulty = standing.standings[str(match.home_team)]["difficulty"]
         away_general_difficulty = standing.standings[str(match.away_team)]["difficulty"]
@@ -140,9 +193,14 @@ def create_obs_from_match(match: Match) -> Observation:
         away_trend = standing.standings[str(match.away_team)]["trend"]
         home_trend_diff = standing.standings[str(match.home_team)]["form_trend_diffs"]
         away_trend_diff = standing.standings[str(match.away_team)]["form_trend_diffs"]
+        home_gd = standing.standings[str(match.home_team)]["goal_difference_last_five"]
+        away_gd = standing.standings[str(match.away_team)]["goal_difference_last_five"]
+        home_ass = standing.standings[str(match.home_team)]["ave_ss"]
+        away_ass = standing.standings[str(match.away_team)]["ave_ss"]
+        gd_diff = home_gd - away_gd
     except Exception as e:
-        print(e)
-        print(f"Couldn't get standings for {match}")
+        # print(e)
+        print(f"Couldn't get standings for {match.fixture_id} \n date - {match.date} \n home team - {match.league["id"]}")
         return None
 
     try:
@@ -152,8 +210,8 @@ def create_obs_from_match(match: Match) -> Observation:
                                                 match.season,
                                                 match.date)
     except Exception as e:
-        print(e)
-        print(f"Couldn't calculate h2h form for {match}")
+        # print(e)
+        print(f"Couldn't calculate h2h form for {match.fixture_id}")
         return None
 
     if match.game_week < 5:
@@ -166,10 +224,17 @@ def create_obs_from_match(match: Match) -> Observation:
         # five_gw=0
         ten_gw = 0
 
+    home_squad_strength, away_squad_strength = create_squad_strength(match=match, test=test)
+    home_squad_diff = home_squad_strength - home_ass
+    away_squad_diff = away_squad_strength - away_ass
+
+
     observation = Observation(match_id=match_id,
                               home_ppg=home_ppg,
+                              home_home_ppg=home_home_ppg,
                               home_plfg=home_plfg,
                               away_ppg=away_ppg,
+                              away_away_ppg=away_away_ppg,
                               away_plfg=away_plfg,
                               home_general_difficulty=home_general_difficulty,
                               away_general_difficulty=away_general_difficulty,
@@ -177,6 +242,7 @@ def create_obs_from_match(match: Match) -> Observation:
                               home_relative_form=home_ppg - home_plfg,
                               away_relative_form=away_ppg - away_plfg,
                               points_diff=home_ppg - away_ppg,
+                              local_ppg_diff=home_home_ppg - away_away_ppg,
                               plfg_diff=home_plfg - away_plfg,
                               home_ppd=home_ppd,
                               away_ppd=away_ppd,
@@ -188,6 +254,11 @@ def create_obs_from_match(match: Match) -> Observation:
                               home_trend_diff=home_trend_diff,
                               away_trend=away_trend,
                               away_trend_diff=away_trend_diff,
+                              gd_diff=gd_diff,
+                              home_squad_strength=home_squad_strength,
+                              away_squad_strength=away_squad_strength,
+                              home_squad_diff=home_squad_diff,
+                              away_squad_diff=away_squad_diff,
                               before_gw_ten=ten_gw)
     return observation
 
@@ -369,11 +440,35 @@ def map_odd_ids():
             print("Updating odds")
             mfc.odds.update_odd(odd, original_home_team)
 
+def calc_for_against(matches: List[Match], team: int):
+    goals_for = 0
+    goals_against = 0
+    for match in matches:
+        if match.home_team == team:
+            goals_for += match.score["fulltime"]["home"]
+            goals_against += match.score["fulltime"]["away"]
+        elif match.away_team == team:
+            goals_for += match.score["fulltime"]["away"]
+            goals_against += match.score["fulltime"]["home"]
+        else:
+            raise RuntimeError(f"{team} was not home or away team in their last 5 matches, \
+                               most likely the query to fetch last 5 matches is broken")
+    goal_difference = goals_for - goals_against
+    return goals_for, goals_against, goal_difference
 
 def create_standings(league_id, season, test=False):
     mfc = MongoFootballClient(conf.MONGO_URL, test)
 
     seasons_matches = mfc.matches.get_leagues_matches(league_id, season)
+    # try:
+    #     lineup_exists = mfc.player_stats.check_exists(seasons_matches[0].home_team, seasons_matches[0].date)
+    #     if not lineup_exists:
+    #         return False
+    # except:
+    #     return False
+
+    if mfc.standings.standing_exists(league_id, season):
+        return True
 
     if not mfc.standings.standing_exists(league_id, season):
         print(f"Creating standings for league {league_id}, season {season}, test collection - {test}")
@@ -425,57 +520,172 @@ def update_table(match_batch: List[Match], last_date, test=False):
                 home_form_ppg = calulate_last_five_ppg(home_general_form)
                 away_form_ppg = calulate_last_five_ppg(away_general_form)
 
+                home_gf, home_ga, home_gd = calc_for_against(home_last_games, match.home_team)
+                away_gf, away_ga, away_gd = calc_for_against(away_last_games, match.away_team)
+
+                #home_squad_strength, away_squad_strength = create_squad_strength(match, test)
+                home_squad_strength, away_squad_strength = 0.0, 0.0
+
                 home_team_new_played = standing.standings[str(match.home_team)]["played"] + 1
+                home_team_new_home_played = standing.standings[str(match.home_team)]["home_played"] + 1
+                home_team_new_away_played = standing.standings[str(match.home_team)]["away_played"]
                 away_team_new_played = standing.standings[str(match.away_team)]["played"] + 1
+                away_team_new_home_played = standing.standings[str(match.away_team)]["home_played"]
+                away_team_new_away_played = standing.standings[str(match.away_team)]["away_played"] + 1
+
+                home_ave_squad_strength = standing.standings[str(match.home_team)]["ave_ss"]
+                home_old_played = standing.standings[str(match.home_team)]["played"]
+                home_squad_strength_total = home_ave_squad_strength * home_old_played
+                home_new_ave_squad_strength = (home_squad_strength_total + home_squad_strength) / home_team_new_played
+
+                away_ave_squad_strength = standing.standings[str(match.away_team)]["ave_ss"]
+                away_old_played = standing.standings[str(match.away_team)]["played"]
+                away_squad_strength_total = away_ave_squad_strength * away_old_played
+                away_new_ave_squad_strength = (away_squad_strength_total + away_squad_strength) / away_team_new_played
 
                 if match.result == "Home Win":
                     home_team_new_won = standing.standings[str(match.home_team)]["won"] + 1
+                    home_team_new_home_won = standing.standings[str(match.home_team)]["home_won"] + 1
+                    home_team_new_away_won = standing.standings[str(match.home_team)]["away_won"]
                     home_team_new_lost = standing.standings[str(match.home_team)]["lost"]
+                    home_team_new_home_lost = standing.standings[str(match.home_team)]["home_lost"]
+                    home_team_new_away_lost = standing.standings[str(match.home_team)]["away_lost"]
                     home_team_new_draw = standing.standings[str(match.home_team)]["draw"]
+                    home_team_new_home_draw = standing.standings[str(match.home_team)]["home_draw"]
+                    home_team_new_away_draw = standing.standings[str(match.home_team)]["away_draw"]
                     home_team_new_points = standing.standings[str(match.home_team)]["points"] + 3
+                    home_team_new_home_points = standing.standings[str(match.home_team)]["home_points"] + 3
+                    home_team_new_away_points = standing.standings[str(match.home_team)]["away_points"]
                     away_team_new_won = standing.standings[str(match.away_team)]["won"]
+                    away_team_new_home_won = standing.standings[str(match.away_team)]["home_won"]
+                    away_team_new_away_won = standing.standings[str(match.away_team)]["away_won"]
                     away_team_new_lost = standing.standings[str(match.away_team)]["lost"] + 1
+                    away_team_new_home_lost = standing.standings[str(match.away_team)]["home_lost"]
+                    away_team_new_away_lost = standing.standings[str(match.away_team)]["away_lost"] + 1
                     away_team_new_draw = standing.standings[str(match.away_team)]["draw"]
+                    away_team_new_home_draw = standing.standings[str(match.away_team)]["home_draw"]
+                    away_team_new_away_draw = standing.standings[str(match.away_team)]["away_draw"]
                     away_team_new_points = standing.standings[str(match.away_team)]["points"]
+                    away_team_new_home_points = standing.standings[str(match.away_team)]["home_points"]
+                    away_team_new_away_points = standing.standings[str(match.away_team)]["away_points"]
                 elif match.result == "Away Win":
                     home_team_new_won = standing.standings[str(match.home_team)]["won"]
+                    home_team_new_home_won = standing.standings[str(match.home_team)]["home_won"]
+                    home_team_new_away_won = standing.standings[str(match.home_team)]["away_won"]
                     home_team_new_lost = standing.standings[str(match.home_team)]["lost"] + 1
+                    home_team_new_home_lost = standing.standings[str(match.home_team)]["home_lost"] + 1
+                    home_team_new_away_lost = standing.standings[str(match.home_team)]["away_lost"]
                     home_team_new_draw = standing.standings[str(match.home_team)]["draw"]
+                    home_team_new_home_draw = standing.standings[str(match.home_team)]["home_draw"]
+                    home_team_new_away_draw = standing.standings[str(match.home_team)]["away_draw"]
                     home_team_new_points = standing.standings[str(match.home_team)]["points"]
+                    home_team_new_home_points = standing.standings[str(match.home_team)]["home_points"]
+                    home_team_new_away_points = standing.standings[str(match.home_team)]["away_points"]
                     away_team_new_won = standing.standings[str(match.away_team)]["won"] + 1
+                    away_team_new_home_won = standing.standings[str(match.away_team)]["home_won"]
+                    away_team_new_away_won = standing.standings[str(match.away_team)]["away_won"] + 1
                     away_team_new_lost = standing.standings[str(match.away_team)]["lost"]
+                    away_team_new_home_lost = standing.standings[str(match.away_team)]["home_lost"]
+                    away_team_new_away_lost = standing.standings[str(match.away_team)]["away_lost"]
                     away_team_new_draw = standing.standings[str(match.away_team)]["draw"]
+                    away_team_new_home_draw = standing.standings[str(match.away_team)]["home_draw"]
+                    away_team_new_away_draw = standing.standings[str(match.away_team)]["away_draw"]
                     away_team_new_points = standing.standings[str(match.away_team)]["points"] + 3
+                    away_team_new_home_points = standing.standings[str(match.away_team)]["home_points"]
+                    away_team_new_away_points = standing.standings[str(match.away_team)]["away_points"] + 3
                 elif match.result == "Draw":
                     home_team_new_won = standing.standings[str(match.home_team)]["won"]
+                    home_team_new_home_won = standing.standings[str(match.home_team)]["home_won"]
+                    home_team_new_away_won = standing.standings[str(match.home_team)]["away_won"]
                     home_team_new_lost = standing.standings[str(match.home_team)]["lost"]
+                    home_team_new_home_lost = standing.standings[str(match.home_team)]["home_lost"]
+                    home_team_new_away_lost = standing.standings[str(match.home_team)]["away_lost"]
                     home_team_new_draw = standing.standings[str(match.home_team)]["draw"] + 1
+                    home_team_new_home_draw = standing.standings[str(match.home_team)]["home_draw"] + 1
+                    home_team_new_away_draw = standing.standings[str(match.home_team)]["away_draw"]
                     home_team_new_points = standing.standings[str(match.home_team)]["points"] + 1
+                    home_team_new_home_points = standing.standings[str(match.home_team)]["home_points"] + 1
+                    home_team_new_away_points = standing.standings[str(match.home_team)]["away_points"]
                     away_team_new_won = standing.standings[str(match.away_team)]["won"]
+                    away_team_new_home_won = standing.standings[str(match.away_team)]["home_won"]
+                    away_team_new_away_won = standing.standings[str(match.away_team)]["away_won"]
                     away_team_new_lost = standing.standings[str(match.away_team)]["lost"]
+                    away_team_new_home_lost = standing.standings[str(match.away_team)]["home_lost"]
+                    away_team_new_away_lost = standing.standings[str(match.away_team)]["away_lost"]
                     away_team_new_draw = standing.standings[str(match.away_team)]["draw"] + 1
+                    away_team_new_home_draw = standing.standings[str(match.away_team)]["home_draw"]
+                    away_team_new_away_draw = standing.standings[str(match.away_team)]["away_draw"] + 1
                     away_team_new_points = standing.standings[str(match.away_team)]["points"] + 1
+                    away_team_new_home_points = standing.standings[str(match.away_team)]["home_points"]
+                    away_team_new_away_points = standing.standings[str(match.away_team)]["away_points"] + 1
                 else:
                     raise RuntimeError(f"Result for finished match cannot be {match.result}")
 
-                home_new_ppg = home_team_new_points / home_team_new_played
-                away_new_ppg = away_team_new_points / away_team_new_played
+                try:
+                    home_new_ppg = home_team_new_points / home_team_new_played
+                    away_new_ppg = away_team_new_points / away_team_new_played
+                    home_ave_squad_strength = 0
+                    if home_team_new_home_played > 0:
+                        home_new_home_ppg = home_team_new_home_points / home_team_new_home_played
+                        away_new_away_ppg = away_team_new_away_points / away_team_new_away_played
+                    else:
+                        home_new_home_ppg = 0
+                        away_new_away_ppg = 0
+
+                    if home_team_new_away_played > 0:
+                        home_new_away_ppg = home_team_new_away_points / home_team_new_away_played
+                    else:
+                        home_new_away_ppg = 0
+
+                    if away_team_new_home_played > 0:
+                        away_new_home_ppg = away_team_new_home_points / away_team_new_home_played
+                    else:
+                        away_new_home_ppg = 0
+                except:
+                    print("ERROR WHEN CREATING THE PPG ATTRIBUTES")
+                
 
                 standing.standings[str(match.home_team)] = {
                 "played": home_team_new_played,
+                "home_played": home_team_new_home_played,
+                "away_played": home_team_new_away_played,
                 "won": home_team_new_won,
+                "home_won": home_team_new_home_won,
+                "away_won": home_team_new_away_won,
                 "lost": home_team_new_lost,
+                "home_lost": home_team_new_home_lost,
+                "away_lost": home_team_new_away_lost,
                 "draw": home_team_new_draw,
+                "home_draw": home_team_new_home_draw,
+                "away_draw": home_team_new_away_draw,
                 "points": home_team_new_points,
-                "ppg": home_new_ppg
+                "home_points": home_team_new_home_points,
+                "away_points": home_team_new_away_points,
+                "ppg": home_new_ppg,
+                "home_ppg": home_new_home_ppg,
+                "away_ppg": home_new_away_ppg,
+                "ave_ss": home_new_ave_squad_strength
             }
                 standing.standings[str(match.away_team)] = {
                 "played": away_team_new_played,
+                "home_played": away_team_new_home_played,
+                "away_played": away_team_new_away_played,
                 "won": away_team_new_won,
+                "home_won": away_team_new_home_won,
+                "away_won": away_team_new_away_won,
                 "lost": away_team_new_lost,
+                "home_lost": away_team_new_home_lost,
+                "away_lost": away_team_new_away_lost,
                 "draw": away_team_new_draw,
+                "home_draw": away_team_new_home_draw,
+                "away_draw": away_team_new_away_draw,
                 "points": away_team_new_points,
-                "ppg": away_new_ppg
+                "home_points": away_team_new_home_points,
+                "away_points": away_team_new_away_points,
+                "ppg": away_new_ppg,
+                "home_ppg": away_new_home_ppg,
+                "away_ppg": away_new_away_ppg,
+                "ave_ss": away_new_ave_squad_strength
             }
 
                 home_general_difficulty = calculate_difficulty(match.home_team, standing, home_last_games)
@@ -500,12 +710,18 @@ def update_table(match_batch: List[Match], last_date, test=False):
                 standing.standings[str(match.home_team)]["ppd"] = home_ppd
                 standing.standings[str(match.home_team)]["trend"] = home_trend
                 standing.standings[str(match.home_team)]["form_trend_diffs"] = home_form_diffs
+                standing.standings[str(match.home_team)]["goals_for_last_five"] = home_gf
+                standing.standings[str(match.home_team)]["goals_against_last_five"] = home_ga
+                standing.standings[str(match.home_team)]["goal_difference_last_five"] = home_gd
 
                 standing.standings[str(match.away_team)]["plfg"] = away_form_ppg
                 standing.standings[str(match.away_team)]["difficulty"] = away_general_difficulty
                 standing.standings[str(match.away_team)]["ppd"] = away_ppd
                 standing.standings[str(match.away_team)]["trend"] = away_trend
                 standing.standings[str(match.away_team)]["form_trend_diffs"] = away_form_diffs
+                standing.standings[str(match.away_team)]["goals_for_last_five"] = away_gf
+                standing.standings[str(match.away_team)]["goals_against_last_five"] = away_ga
+                standing.standings[str(match.away_team)]["goal_difference_last_five"] = away_gd
 
             mfc.standings.add_standing(standing)
         except Exception as e:
@@ -556,16 +772,30 @@ def initialise_table(league_id, season, test):
 
     initial_standings = {
         "played": 0,
+        "home_played": 0,
+        "away_played": 0,
         "won": 0,
+        "home_won": 0,
+        "away_won": 0,
         "lost": 0,
+        "home_lost": 0,
+        "away_lost": 0,
         "draw": 0,
+        "home_draw": 0,
+        "away_draw": 0,
         "points": 0,
+        "home_points": 0,
+        "away_points": 0,
         "ppg": 0,
         "plfg": 0,
         "difficulty": 0,
         "ppd": 0,
         "trend": 0,
-        "form_trend_diffs": 0
+        "form_trend_diffs": 0,
+        "goals_for_last_five": 0,
+        "goals_against_last_five": 0,
+        "goal_difference_last_five": 0,
+        "ave_ss": 0,
     }
 
     standings = {}

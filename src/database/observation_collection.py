@@ -65,3 +65,11 @@ class ObservationCollection(MongoCollection):
             col = self.col
         obs_to_add = list(map(lambda x: x.__dict__, observations))
         col.insert_many(obs_to_add)
+
+    def get_all(self):
+        obs = self.col.find({})
+        returned_list = []
+        for ob in obs:
+            returned_list.append(Observation.from_mongo_doc(ob))
+        print(len(returned_list))
+        return returned_list

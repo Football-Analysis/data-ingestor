@@ -6,14 +6,17 @@ from typing import Optional
 class Observation:
     match_id: str
     home_ppg: float
+    home_home_ppg: float
     home_plfg: float
     away_ppg: float
+    away_away_ppg: float
     away_plfg: float
     home_general_difficulty: float
     away_general_difficulty: float
     home_relative_form: float
     away_relative_form: float
     points_diff: float
+    local_ppg_diff: float
     plfg_diff: float
     home_ppd: float
     away_ppd: float
@@ -26,6 +29,11 @@ class Observation:
     home_trend_diff: float
     away_trend: int
     away_trend_diff: float
+    gd_diff: int
+    home_squad_strength: float
+    away_squad_strength: float
+    home_squad_diff: float
+    away_squad_diff: float
     result: Optional[str]
 
     @staticmethod

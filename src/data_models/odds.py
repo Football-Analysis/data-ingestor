@@ -4,7 +4,8 @@ from typing import Any
 
 @dataclass
 class Odds:
-    date: str
+    match_date: str
+    odds_date: str
     home_team: Any
     away_team: Any
     home_odds: float

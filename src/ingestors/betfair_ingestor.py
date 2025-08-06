@@ -87,6 +87,7 @@ class BetfairClient(Ingestor):
 
                 for data_point in data_list:
                     mc = data_point["mc"]
+                    odds_time = datetime.fromtimestamp(data_point["pt"]/1000).strftime("%Y-%m-%dT%H:%M:%S+00:00")
                     for market in mc:
                         mid = market["id"]
                         if mid not in market_ids and mid not in processed_mids:
@@ -118,12 +119,19 @@ class BetfairClient(Ingestor):
                                     market_ids[mid] = runner_objects
                                     market_ids[mid]["started"] = False
                                     market_ids[mid]["startTime"] = market["marketDefinition"]["marketTime"][:-5] + "+00:00"
+                                    market_ids[mid]["oddsTime"] = odds_time
                         elif mid not in processed_mids:
                             if not market_ids[mid]["started"]:
                                 if "rc" in market:
                                     for runner in market["rc"]:
-                                        if runner["ltp"] > market_ids[mid][runner["id"]]["odds"]:
+                                        market_ids[mid]["oddsTime"] = odds_time
+                                        start_time = datetime.strptime(market_ids[mid]["startTime"], "%Y-%m-%dT%H:%M:%S+00:00")
+                                        odd_time = datetime.strptime(odds_time, "%Y-%m-%dT%H:%M:%S+00:00")
+                                        if odds_time < market_ids[mid]["startTime"] and (start_time - odd_time) < timedelta(hours=1):
                                             market_ids[mid][runner["id"]]["odds"] = runner["ltp"]
+                                            odds_to_save = Odds(market_ids[mid]["startTime"],
+                                                                odds_time,
+                                                                )
                                 if "marketDefinition" in market:
                                     if market["marketDefinition"]["inPlay"]:
                                         market_ids[mid]["started"] = True
@@ -135,14 +143,14 @@ class BetfairClient(Ingestor):
                                                 if "draw" in runner:
                                                     draw_odds = runner["odds"]
                                                 elif runner["home"]:
-                                                    home_id = self.mfc.get_team_from_name(runner["name"], "betfair")
+                                                    home_id = self.mfc.teams.get_team_from_name(runner["name"], "betfair")
                                                     if home_id is not None:
                                                         home_team = home_id
                                                     else:
                                                         home_team = runner["name"]
                                                     home_odds = runner["odds"]
                                                 elif not runner["home"]:
-                                                    away_id = self.mfc.get_team_from_name(runner["name"], "betfair")
+                                                    away_id = self.mfc.teams.get_team_from_name(runner["name"], "betfair")
                                                     if away_id is not None:
                                                         away_team = away_id
                                                     else:
@@ -162,3 +170,6 @@ class BetfairClient(Ingestor):
                                         saved_odds += 1
                                         if saved_odds % 50 == 0:
                                             print(f"Saved {saved_odds} amount of fixture odds")
+
+    def create_team_ids(self, something):
+        pass

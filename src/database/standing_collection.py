@@ -10,7 +10,7 @@ class StandingCollection(MongoCollection):
 
         Args:
             league_id (int): The league id to check against
-            season (int): The seasons to chec kagainst
+            season (int): The seasons to check against
             date (_type_, optional): The date to check against. Defaults to None.
         """
         query_filter = {"league_id": league_id, "season": season}
@@ -43,7 +43,7 @@ class StandingCollection(MongoCollection):
         gen_filter = {
             "league_id": league_id,
             "season": season,
-            "date": {"$lte": date}
+            "date": {"$lt": date}
         }
 
         standings = self.col.find(gen_filter).sort("date", DESCENDING)

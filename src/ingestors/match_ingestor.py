@@ -199,14 +199,14 @@ class ApiFootball(Ingestor):
             print(headers)
             print(e)
 
-        if requests_left_min == 449:
+        if requests_left_min == 799:
             self.start_minute = time()
         else:
             if requests_left_day % 1000 == 0:
                 print(f"{requests_left_day} requests left on daily plan")
             if requests_left_min % 50 == 0:
                 print(f"{requests_left_min} requests left on minute limit")
-            if requests_left_day < 50:
+            if requests_left_day < 5000:
                 raise RuntimeError("Daily API limit reached for API-Football. Please come back tomorrow")
             if requests_left_min < 3:
                 print("Hit API Rate limit, waiting until end of minute")
@@ -302,7 +302,7 @@ class ApiFootball(Ingestor):
                 player_processed_stats.append(Player(player_id=player_id, team=team, minutes=minutes, started=started))
         return player_processed_stats
     
-    def get_lineups(self, fixture_id: int) -> List[Player]:
+    def get_lineups(self, fixture_id: int) -> List[List[Player]]:
         endpoint = f"{self.base_url}/fixtures/lineups"
         params = {"fixture": fixture_id}
         player_stats = get(endpoint, headers=self.base_headers, params=params)
@@ -314,12 +314,18 @@ class ApiFootball(Ingestor):
             return False
         
         player_processed_stats = []
-        for team in player_stats.json()["response"]:
-            players = team["startXI"]
-            team = team["team"]["id"]
-            for player in players:
-                player_id = player["player"]["id"]
-                player_processed_stats.append(Player(player_id=player_id, team=team, started=True))
+        try:
+            for team in player_stats.json()["response"]:
+                players = team["startXI"]
+                team = team["team"]["id"]
+                team_players = []
+                for player in players:
+                    player_id = player["player"]["id"]
+                    team_players.append(Player(player_id=player_id, team=team, started=True))
+                player_processed_stats.append(team_players)
+        except:
+            return False
+        
         return player_processed_stats
 
     def get_game_from_id(self, fixture_id) -> Match:
